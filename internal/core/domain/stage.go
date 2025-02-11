@@ -22,6 +22,11 @@ func (s *BaseStage) GetID() uuid.UUID {
 	return s.ID
 }
 
+func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}, error) {
+	log.Println("Executing base stage:", s.ID)
+	return input, nil
+}
+
 func (s *BaseStage) HandleError(ctx context.Context, err error) error {
 	log.Println("Error in stage execution:", err)
 	return errors.New("stage execution failed: " + err.Error())

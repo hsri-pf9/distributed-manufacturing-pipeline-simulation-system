@@ -25,6 +25,4 @@ func InitDatabase() {
 	if err := DB.AutoMigrate(&domain.PipelineExecution{}, &domain.ExecutionLog{}); err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
-	
-
 }
