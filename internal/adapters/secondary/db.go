@@ -5,7 +5,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
-	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/models"
 )
 
 var DB *gorm.DB
@@ -22,7 +22,7 @@ func InitDatabase() {
 		log.Fatalf("Failed to connect to Supabase database: %v", err)
 	}
 
-	if err := DB.AutoMigrate(&domain.PipelineExecution{}, &domain.ExecutionLog{}); err != nil {
+	if err := DB.AutoMigrate(&models.PipelineExecution{}, &models.ExecutionLog{}); err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
 }

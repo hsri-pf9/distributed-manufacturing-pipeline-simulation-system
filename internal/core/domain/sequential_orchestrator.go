@@ -4,23 +4,26 @@ import (
 	"context"
 	"errors"
 	"log"
-	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/models"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/ports"
 )
 
 type SequentialPipelineOrchestrator struct {
 	ID     uuid.UUID
 	Stages []Stage
 	Status map[uuid.UUID]string 
-	mu     sync.Mutex           
+	DBAdapter  ports.PipelineRepository           
 }
 
-func NewSequentialPipelineOrchestrator() *SequentialPipelineOrchestrator {
+func NewSequentialPipelineOrchestrator(dbAdapter ports.PipelineRepository) *SequentialPipelineOrchestrator {
 	return &SequentialPipelineOrchestrator{
 		ID:     uuid.New(),
 		Stages: []Stage{},
 		Status: make(map[uuid.UUID]string),
+		DBAdapter: dbAdapter,
 	}
 }
 
@@ -35,30 +38,44 @@ func (p *SequentialPipelineOrchestrator) AddStage(stage Stage) error {
 func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, input interface{}) (interface{}, error) {
 	pipelineID := p.ID
 
-	// Mark pipeline as running
-	p.updateStatus(pipelineID, "Running")
+	pipelineExecution := &models.PipelineExecution{
+		ID:         pipelineID,
+		Status:     "Running",
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+
+	if err := p.DBAdapter.SavePipelineExecution(pipelineExecution); err != nil {
+		return nil, err
+	}
 
 	var result interface{} = input
 	var completedStages []Stage
 
 	for _, stage := range p.Stages {
 		log.Printf("Executing stage: %v\n", stage.GetID())
-
 		var err error
 		result, err = stage.Execute(ctx, result)
+		logEntry := &models.ExecutionLog{
+			ID:         uuid.New(),
+			StageID:    stage.GetID(),
+			PipelineID: pipelineID,
+			Status:     "Completed",
+			Timestamp:  time.Now(),
+		}
 		if err != nil {
-			log.Printf("Error in stage %v: %v. Rolling back...\n", stage.GetID(), err)
-			stage.HandleError(ctx, err)
+			logEntry.Status = "Failed"
+			logEntry.ErrorMsg = err.Error()
+			p.DBAdapter.SaveExecutionLog(logEntry)
 			p.rollback(ctx, completedStages, result)
-
-			p.updateStatus(pipelineID, "Failed")
+			p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Failed"})
 			return nil, err
 		}
-
+		p.DBAdapter.SaveExecutionLog(logEntry)
 		completedStages = append(completedStages, stage)
 	}
 
-	p.updateStatus(pipelineID, "Completed")
+	p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Completed"})
 	return result, nil
 }
 
@@ -69,31 +86,9 @@ func (p *SequentialPipelineOrchestrator) rollback(ctx context.Context, completed
 }
 
 func (p *SequentialPipelineOrchestrator) Cancel(pipelineID uuid.UUID) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if _, exists := p.Status[pipelineID]; !exists {
-		return errors.New("pipeline ID not found")
-	}
-
-	log.Printf("Cancelling pipeline: %v\n", pipelineID)
-	p.Status[pipelineID] = "Cancelled"
-	return nil
+	return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Cancelled"})
 }
 
 func (p *SequentialPipelineOrchestrator) GetStatus(pipelineID uuid.UUID) (string, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	status, exists := p.Status[pipelineID]
-	if !exists {
-		return "", errors.New("pipeline ID not found")
-	}
-	return status, nil
-}
-
-func (p *SequentialPipelineOrchestrator) updateStatus(pipelineID uuid.UUID, status string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.Status[pipelineID] = status
+	return p.DBAdapter.GetPipelineStatus(pipelineID.String())
 }
