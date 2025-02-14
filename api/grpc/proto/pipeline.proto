@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package pipeline;
+
+option go_package = "api/grpc/proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service PipelineService {
+  rpc CreatePipeline(CreatePipelineRequest) returns (CreatePipelineResponse);
+  rpc ExecutePipeline(ExecutePipelineRequest) returns (ExecutePipelineResponse);
+  rpc GetPipelineStatus(GetPipelineStatusRequest) returns (GetPipelineStatusResponse);
+  rpc CancelPipeline(CancelPipelineRequest) returns (google.protobuf.Empty);
+}
+
+message CreatePipelineRequest {
+  repeated Stage stages = 1;
+}
+
+message CreatePipelineResponse {
+  string pipeline_id = 1;
+}
+
+message ExecutePipelineRequest {
+  string pipeline_id = 1;
+  string input_data = 2;
+}
+
+message ExecutePipelineResponse {
+  string pipeline_id = 1;
+  string output_data = 2;
+}
+
+message GetPipelineStatusRequest {
+  string pipeline_id = 1;
+}
+
+message GetPipelineStatusResponse {
+  string pipeline_id = 1;
+  string status = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+message CancelPipelineRequest {
+  string pipeline_id = 1;
+}
+
+message Stage {
+  string id = 1;
+  string name = 2;
+}
