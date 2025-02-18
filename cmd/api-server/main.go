@@ -12,6 +12,9 @@ import (
 )
 
 func main() {
+
+	secondary.InitDatabase()
+
 	// Initialize database repository
 	dbRepo := secondary.NewDatabaseAdapter()
 
@@ -38,3 +41,4 @@ func main() {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+
