@@ -25,11 +25,19 @@ func main() {
 	// Initialize pipeline service
 	pipelineService := services.NewPipelineService(sequentialOrchestrator, parallelOrchestrator, dbRepo)
 
+	// email := "harshsrivastava2404@gmail.com"
+	// password := "harsh123"
+
+	authService := services.NewAuthService()
+
 	// Initialize REST API handler
 	handler := &rest.PipelineHandler{Service: pipelineService}
-
+	authHandler := &rest.AuthHandler{Service: authService}
 	// Setup Gin router
 	r := gin.Default()
+	r.POST("/register", gin.WrapF(authHandler.RegisterHandler))
+	r.POST("/login", gin.WrapF(authHandler.LoginHandler))
+
 	r.POST("/pipelines", handler.CreatePipeline)
 	r.POST("/pipelines/:id/start", handler.StartPipeline)
 	r.GET("/pipelines/:id/status", handler.GetPipelineStatus)
