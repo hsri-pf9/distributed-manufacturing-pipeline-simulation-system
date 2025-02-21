@@ -18,12 +18,16 @@ type BaseStage struct {
 	ID uuid.UUID
 }
 
+func NewBaseStage() *BaseStage {
+	return &BaseStage{ID: uuid.New()}
+}
+
 func (s *BaseStage) GetID() uuid.UUID {
 	return s.ID
 }
 
 func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}, error) {
-	log.Println("Executing base stage:", s.ID)
+	log.Printf("Executing stage: %s\n", s.ID)
 	return input, nil
 }
 

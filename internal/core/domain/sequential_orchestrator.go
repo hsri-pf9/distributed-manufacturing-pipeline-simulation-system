@@ -12,17 +12,17 @@ import (
 )
 
 type SequentialPipelineOrchestrator struct {
-	ID     uuid.UUID
-	Stages []Stage
-	Status map[uuid.UUID]string 
-	DBAdapter  ports.PipelineRepository           
+	ID        uuid.UUID
+	Stages    []Stage
+	Status    map[uuid.UUID]string
+	DBAdapter ports.PipelineRepository
 }
 
 func NewSequentialPipelineOrchestrator(dbAdapter ports.PipelineRepository) *SequentialPipelineOrchestrator {
 	return &SequentialPipelineOrchestrator{
-		ID:     uuid.New(),
-		Stages: []Stage{},
-		Status: make(map[uuid.UUID]string),
+		ID:        uuid.New(),
+		Stages:    []Stage{},
+		Status:    make(map[uuid.UUID]string),
 		DBAdapter: dbAdapter,
 	}
 }
@@ -34,19 +34,24 @@ func (p *SequentialPipelineOrchestrator) AddStage(stage Stage) error {
 	p.Stages = append(p.Stages, stage)
 	return nil
 }
-
-func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, input interface{}) (interface{}, error) {
-	pipelineID := p.ID
+ 
+func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
+	// Ensure the user exists before proceeding
+	user, err := p.DBAdapter.GetUserByID(userID)
+	if err != nil {
+		return uuid.Nil, nil, errors.New("user not found")
+	}
 
 	pipelineExecution := &models.PipelineExecution{
-		ID:         pipelineID,
+		PipelineID: p.ID,
+		UserID:     user.UserID,
 		Status:     "Running",
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 	}
 
 	if err := p.DBAdapter.SavePipelineExecution(pipelineExecution); err != nil {
-		return nil, err
+		return uuid.Nil, nil, err
 	}
 
 	var result interface{} = input
@@ -57,9 +62,8 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, input inte
 		var err error
 		result, err = stage.Execute(ctx, result)
 		logEntry := &models.ExecutionLog{
-			ID:         uuid.New(),
 			StageID:    stage.GetID(),
-			PipelineID: pipelineID,
+			PipelineID: p.ID,
 			Status:     "Completed",
 			Timestamp:  time.Now(),
 		}
@@ -68,15 +72,33 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, input inte
 			logEntry.ErrorMsg = err.Error()
 			p.DBAdapter.SaveExecutionLog(logEntry)
 			p.rollback(ctx, completedStages, result)
-			p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Failed"})
-			return nil, err
+			// Correctly update status with the right ID
+			updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+				PipelineID: p.ID,
+				Status:     "Failed",
+				UpdatedAt:  time.Now(),
+			})
+			if updateErr != nil {
+				log.Printf("Failed to update pipeline status: %v", updateErr)
+			}
+
+			return stage.GetID(), nil, err
 		}
 		p.DBAdapter.SaveExecutionLog(logEntry)
 		completedStages = append(completedStages, stage)
 	}
 
-	p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Completed"})
-	return result, nil
+	// Step 5: Update Pipeline Execution to Completed
+	updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+		PipelineID: p.ID,
+		Status:     "Completed",
+		UpdatedAt:  time.Now(),
+	})
+	if updateErr != nil {
+		log.Printf("Failed to update pipeline status: %v", updateErr)
+	}
+
+	return uuid.Nil, result, nil
 }
 
 func (p *SequentialPipelineOrchestrator) rollback(ctx context.Context, completedStages []Stage, input interface{}) {
@@ -85,10 +107,30 @@ func (p *SequentialPipelineOrchestrator) rollback(ctx context.Context, completed
 	}
 }
 
-func (p *SequentialPipelineOrchestrator) Cancel(pipelineID uuid.UUID) error {
-	return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{ID: pipelineID, Status: "Cancelled"})
+func (p *SequentialPipelineOrchestrator) Cancel(pipelineID uuid.UUID, userID uuid.UUID) error {
+	// Step 1: Validate Pipeline Existence
+	status, err := p.DBAdapter.GetPipelineStatus(pipelineID.String())
+	if err != nil {
+		return errors.New("pipeline not found")
+	}
+
+	// Step 2: Prevent Canceling Completed Pipelines
+	if status == "Completed" {
+		return errors.New("cannot cancel a completed pipeline")
+	}
+
+	// Step 3: Update Status to Cancelled
+	return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+		PipelineID: pipelineID,
+		Status:     "Cancelled",
+		UpdatedAt:  time.Now(),
+	})
 }
 
 func (p *SequentialPipelineOrchestrator) GetStatus(pipelineID uuid.UUID) (string, error) {
-	return p.DBAdapter.GetPipelineStatus(pipelineID.String())
+	status, err := p.DBAdapter.GetPipelineStatus(pipelineID.String())
+	if err != nil {
+		return "", errors.New("failed to retrieve pipeline status")
+	}
+	return status, nil
 }

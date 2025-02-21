@@ -37,7 +37,9 @@ type User struct {
 	UserID uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	Name   string    `gorm:"type:varchar(100);not null"`
 	Email  string    `gorm:"type:varchar(100);unique;not null"`
+	Role   string    `gorm:"type:varchar(20);not null;default:'worker';check:role IN ('super_admin', 'admin', 'manager', 'worker')"`
 }
+
 
 // PipelineExecution stores pipeline execution details for a user
 type PipelineExecution struct {
