@@ -4,23 +4,28 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/models"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/ports"
 	"github.com/nedpals/supabase-go"
 )
 
 // AuthService handles user authentication
 type AuthService struct {
 	SupabaseClient *supabase.Client
+	Repo           ports.PipelineRepository
 }
 
 // NewAuthService initializes the AuthService
-func NewAuthService() *AuthService {
+func NewAuthService(repo ports.PipelineRepository) *AuthService {
 	return &AuthService{
 		SupabaseClient: secondary.InitSupabaseClient(),
+		Repo:           repo,
 	}
 }
 
-// RegisterUser registers a new user and logs them in to get a session token
+// RegisterUser registers a new user and saves their details in the database
 func (s *AuthService) RegisterUser(email, password string) (string, string, string, error) {
 	user, err := s.SupabaseClient.Auth.SignUp(context.Background(), supabase.UserCredentials{
 		Email:    email,
@@ -43,6 +48,18 @@ func (s *AuthService) RegisterUser(email, password string) (string, string, stri
 		return "", "", "", errors.New("login after registration failed: " + err.Error())
 	}
 
+	// Save user details in the database
+	newUser := &models.User{
+		UserID: uuid.MustParse(user.ID),
+		Email:  user.Email,
+		Name:   "", // Name should be updated from the UI later
+		Role:   "worker", // Default role
+	}
+
+	if err := s.Repo.SaveUser(newUser); err != nil {
+		return "", "", "", errors.New("failed to save user in the database: " + err.Error())
+	}
+
 	return user.ID, user.Email, session.AccessToken, nil
 }
 
@@ -62,5 +79,3 @@ func (s *AuthService) LoginUser(email, password string) (string, string, string,
 
 	return session.User.ID, session.User.Email, session.AccessToken, nil
 }
-
-

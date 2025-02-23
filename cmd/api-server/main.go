@@ -28,7 +28,7 @@ func main() {
 	// email := "harshsrivastava2404@gmail.com"
 	// password := "harsh123"
 
-	authService := services.NewAuthService()
+	authService := services.NewAuthService(dbRepo)
 
 	// Initialize REST API handler
 	handler := &rest.PipelineHandler{Service: pipelineService}

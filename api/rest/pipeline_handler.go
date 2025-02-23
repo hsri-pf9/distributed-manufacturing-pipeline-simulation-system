@@ -14,10 +14,12 @@ type PipelineHandler struct {
 }
 
 type CreatePipelineRequest struct {
-	Stages    int  `json:"stages"`
+	Stages     int  `json:"stages"`
 	IsParallel bool `json:"is_parallel"`
+	UserID     uuid.UUID `json:"user_id"` // Extracted from the request
 }
 
+// CreatePipeline handles pipeline creation
 func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 	var req CreatePipelineRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -25,7 +27,12 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 		return
 	}
 
-	pipelineID, err := h.Service.CreatePipeline(req.Stages, req.IsParallel)
+	if req.UserID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	pipelineID, err := h.Service.CreatePipeline(req.UserID, req.Stages, req.IsParallel)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pipeline"})
 		return
@@ -37,8 +44,10 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 type StartPipelineRequest struct {
 	Input      interface{} `json:"input"`
 	IsParallel bool        `json:"is_parallel"`
+	UserID     uuid.UUID   `json:"user_id"`
 }
 
+// StartPipeline handles pipeline execution
 func (h *PipelineHandler) StartPipeline(c *gin.Context) {
 	pipelineID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -52,13 +61,23 @@ func (h *PipelineHandler) StartPipeline(c *gin.Context) {
 		return
 	}
 
+	if req.UserID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
 	go func() {
-		h.Service.StartPipeline(context.Background(), pipelineID, req.Input, req.IsParallel)
+		h.Service.StartPipeline(context.Background(), req.UserID, pipelineID, req.Input, req.IsParallel)
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Pipeline execution started", "pipeline_id": pipelineID})
 }
 
+type GetPipelineStatusRequest struct {
+	IsParallel bool `json:"is_parallel"`
+}
+
+// GetPipelineStatus retrieves the current status of a pipeline
 func (h *PipelineHandler) GetPipelineStatus(c *gin.Context) {
 	pipelineID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -66,7 +85,13 @@ func (h *PipelineHandler) GetPipelineStatus(c *gin.Context) {
 		return
 	}
 
-	status, err := h.Service.GetPipelineStatus(pipelineID)
+	var req GetPipelineStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	status, err := h.Service.GetPipelineStatus(pipelineID, req.IsParallel)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Pipeline not found"})
 		return
@@ -75,6 +100,12 @@ func (h *PipelineHandler) GetPipelineStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"pipeline_id": pipelineID, "status": status})
 }
 
+type CancelPipelineRequest struct {
+	IsParallel bool      `json:"is_parallel"`
+	UserID     uuid.UUID `json:"user_id"`
+}
+
+// CancelPipeline cancels an ongoing pipeline execution
 func (h *PipelineHandler) CancelPipeline(c *gin.Context) {
 	pipelineID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -82,7 +113,18 @@ func (h *PipelineHandler) CancelPipeline(c *gin.Context) {
 		return
 	}
 
-	err = h.Service.CancelPipeline(pipelineID)
+	var req CancelPipelineRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if req.UserID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	err = h.Service.CancelPipeline(pipelineID, req.UserID, req.IsParallel)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel pipeline"})
 		return

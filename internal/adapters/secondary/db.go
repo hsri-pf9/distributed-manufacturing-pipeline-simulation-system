@@ -32,7 +32,7 @@ func InitDatabase() {
     }
     log.Println("Database connection established.")
 
-    if err := DB.AutoMigrate(&models.PipelineExecution{}, &models.ExecutionLog{}); err != nil {
+    if err := DB.AutoMigrate(&models.User{}, &models.PipelineExecution{}, &models.ExecutionLog{}); err != nil {
         log.Fatalf("Database migration failed: %v", err)
     }
     log.Println("Database migration completed.")

@@ -11,4 +11,5 @@ type PipelineRepository interface {
 	GetPipelineStatus(pipelineID string) (string, error)
 
 	GetUserByID(userID uuid.UUID) (*models.User, error)
+	SaveUser(user *models.User) error
 }
