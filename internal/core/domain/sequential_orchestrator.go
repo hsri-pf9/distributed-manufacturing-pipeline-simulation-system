@@ -108,23 +108,42 @@ func (p *SequentialPipelineOrchestrator) rollback(ctx context.Context, completed
 }
 
 func (p *SequentialPipelineOrchestrator) Cancel(pipelineID uuid.UUID, userID uuid.UUID) error {
+	log.Printf("Checking if pipeline %s exists before cancelling", pipelineID)
 	// Step 1: Validate Pipeline Existence
 	status, err := p.DBAdapter.GetPipelineStatus(pipelineID.String())
 	if err != nil {
+		log.Printf("Error fetching pipeline status: %v", err)
 		return errors.New("pipeline not found")
 	}
 
+	log.Printf("Pipeline status: %s", status)
+
 	// Step 2: Prevent Canceling Completed Pipelines
 	if status == "Completed" {
+		log.Printf("Pipeline %s is already completed, cannot cancel", pipelineID)
 		return errors.New("cannot cancel a completed pipeline")
 	}
 
 	// Step 3: Update Status to Cancelled
-	return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+	log.Printf("Cancelling pipeline %s...", pipelineID)
+	// return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+	// 	PipelineID: pipelineID,
+	// 	Status:     "Cancelled",
+	// 	UpdatedAt:  time.Now(),
+	// })
+	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
 		PipelineID: pipelineID,
 		Status:     "Cancelled",
 		UpdatedAt:  time.Now(),
 	})
+
+	if err != nil {
+		log.Printf("Failed to update pipeline status: %v", err)
+		return errors.New("failed to update pipeline status")
+	}
+
+	log.Printf("Pipeline %s successfully cancelled", pipelineID)
+	return nil
 }
 
 func (p *SequentialPipelineOrchestrator) GetStatus(pipelineID uuid.UUID) (string, error) {

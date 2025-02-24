@@ -104,8 +104,15 @@ func (ps *PipelineService) CancelPipeline(pipelineID uuid.UUID, userID uuid.UUID
 	} else {
 		orchestrator = ps.SequentialOrchestrator
 	}
+	log.Printf("Cancelling pipeline: %s by user: %s", pipelineID, userID)
 
-	return orchestrator.Cancel(pipelineID, userID)
+	// return orchestrator.Cancel(pipelineID, userID)
+	err := orchestrator.Cancel(pipelineID, userID)
+    if err != nil {
+        log.Printf("Failed to cancel pipeline: %v", err)
+    }
+
+    return err
 }
 
 func (ps *PipelineService) updatePipelineStatus(pipelineID uuid.UUID, status string) error {

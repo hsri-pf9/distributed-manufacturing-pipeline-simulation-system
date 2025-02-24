@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"net/http"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -85,13 +86,21 @@ func (h *PipelineHandler) GetPipelineStatus(c *gin.Context) {
 		return
 	}
 
-	var req GetPipelineStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
+	// var req GetPipelineStatusRequest
+	// if err := c.ShouldBindJSON(&req); err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+	// 	return
+	// }
 
-	status, err := h.Service.GetPipelineStatus(pipelineID, req.IsParallel)
+	// Get the "is_parallel" query parameter (defaults to false if not provided)
+	isParallel := c.DefaultQuery("is_parallel", "false") == "true"
+
+	// status, err := h.Service.GetPipelineStatus(pipelineID, req.IsParallel)
+	// if err != nil {
+	// 	c.JSON(http.StatusNotFound, gin.H{"error": "Pipeline not found"})
+	// 	return
+	// }
+	status, err := h.Service.GetPipelineStatus(pipelineID, isParallel)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Pipeline not found"})
 		return
@@ -126,6 +135,7 @@ func (h *PipelineHandler) CancelPipeline(c *gin.Context) {
 
 	err = h.Service.CancelPipeline(pipelineID, req.UserID, req.IsParallel)
 	if err != nil {
+		log.Printf("Error cancelling pipeline: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel pipeline"})
 		return
 	}
