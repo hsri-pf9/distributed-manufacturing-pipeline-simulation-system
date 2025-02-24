@@ -23,7 +23,7 @@ func InitDatabase() {
         log.Fatal("SUPABASE_DB environment variable is not set")
     }
 
-	log.Printf("Connecting to database: %s", dsn)
+    log.Printf("Connecting to database: %s", dsn)
 
     var err error
     DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -32,8 +32,32 @@ func InitDatabase() {
     }
     log.Println("Database connection established.")
 
-    if err := DB.AutoMigrate(&models.User{}, &models.PipelineExecution{}, &models.ExecutionLog{}); err != nil {
-        log.Fatalf("Database migration failed: %v", err)
+    // Enable UUID extension
+    err = DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";").Error
+    if err != nil {
+        log.Fatalf("Failed to enable uuid-ossp extension: %v", err)
     }
-    log.Println("Database migration completed.")
+    log.Println("UUID-OSSP extension enabled.")
+
+    // // **Migrate User table first**
+    // if err := DB.AutoMigrate(&models.Customer{}); err != nil {
+    //     log.Fatalf("Failed to migrate Customer table: %v", err)
+    // }
+
+    // **Migrate User table first**
+    if err := DB.AutoMigrate(&models.User{}); err != nil {
+        log.Fatalf("Failed to migrate User table: %v", err)
+    }
+
+    // **Migrate PipelineExecution next**
+    if err := DB.AutoMigrate(&models.PipelineExecution{}); err != nil {
+        log.Fatalf("Failed to migrate PipelineExecution table: %v", err)
+    }
+
+    // **Migrate ExecutionLog last (depends on PipelineExecution)**
+    if err := DB.AutoMigrate(&models.ExecutionLog{}); err != nil {
+        log.Fatalf("Failed to migrate ExecutionLog table: %v", err)
+    }
+
+    log.Println("Database migration completed successfully.")
 }
