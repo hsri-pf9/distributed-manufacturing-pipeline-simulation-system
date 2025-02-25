@@ -9,7 +9,8 @@ import (
 type User struct {
     // UserID uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	UserID    uuid.UUID `gorm:"column:user_id;type:uuid;primaryKey"`
-    Name   string    `gorm:"type:varchar(100);not null"`
+    // Name   string    `gorm:"type:varchar(100);not null"`
+    Name   string    `gorm:"type:varchar(100)"`
     Email  string    `gorm:"type:varchar(100);unique;not null"`
     Role   string    `gorm:"type:varchar(20);not null;default:'worker';check:role IN ('super_admin', 'admin', 'manager', 'worker')"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`

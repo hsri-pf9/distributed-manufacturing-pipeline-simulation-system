@@ -126,8 +126,8 @@ func (s *AuthService) LoginUser(email, password string) (string, string, string,
 		newUser := &models.User{
 			UserID: userUUID,
 			Email:  session.User.Email,
-			Name:   "Harsh Srivastava",
-			Role:   "admin",
+			// Name:   "Harsh Srivastava",
+			// Role:   "admin",
 		}
 		if err := s.Repo.SaveUser(newUser); err != nil {
 			return "", "", "", errors.New("failed to save user in the database: " + err.Error())
