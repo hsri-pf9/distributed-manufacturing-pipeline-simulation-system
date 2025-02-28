@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"time"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
@@ -28,16 +29,28 @@ func NewPipelineService(sequential *domain.SequentialPipelineOrchestrator, paral
 func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isParallel bool) (uuid.UUID, error) {
 	pipelineID := uuid.New()
 
+	// var orchestrator domain.PipelineOrchestrator
+	// if isParallel {
+	// 	ps.ParallelOrchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
+	// 	orchestrator = ps.ParallelOrchestrator
+	// } else {
+	// 	ps.SequentialOrchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
+	// 	orchestrator = ps.SequentialOrchestrator
+	// }
+
 	var orchestrator domain.PipelineOrchestrator
 	if isParallel {
-		orchestrator = ps.ParallelOrchestrator
+		orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
+		ps.ParallelOrchestrator = orchestrator.(*domain.ParallelPipelineOrchestrator)
 	} else {
-		orchestrator = ps.SequentialOrchestrator
+		orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
+		ps.SequentialOrchestrator = orchestrator.(*domain.SequentialPipelineOrchestrator)
 	}
 
 	
 	for i := 0; i < stageCount; i++ {
 		stage := domain.NewBaseStage()
+		log.Printf("Adding Stage: %s to Pipeline: %s", stage.GetID(), pipelineID) // Debugging log
 		if err := orchestrator.AddStage(stage); err != nil {
 			return uuid.Nil, err
 		}
@@ -65,11 +78,27 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 		orchestrator = ps.SequentialOrchestrator
 	}
 
+	if orchestrator == nil {
+		return errors.New("orchestrator not initialized for this pipeline")
+	}
+
+	// 🚀 **Fix: Ensure pipeline exists before execution**
+	status, err := ps.Repository.GetPipelineStatus(pipelineID.String())
+	if err != nil || status != "Created" {
+		return errors.New("invalid pipeline status: " + status)
+	}
+
+	// 🚀 **Fix: Ensure stages are present before execution**
+	if len(orchestrator.(*domain.SequentialPipelineOrchestrator).Stages) == 0 {
+		return errors.New("no stages found for this pipeline execution")
+	}
+
+
 	if err := ps.updatePipelineStatus(pipelineID, "Running"); err != nil {
 		return err
 	}
 
-	stageID, _, err := orchestrator.Execute(ctx, userID, input)
+	stageID, _, err := orchestrator.Execute(ctx, userID, pipelineID, input)
 	if err != nil {
 		_ = ps.updatePipelineStatus(pipelineID, "Failed")
 		ps.logExecutionError(pipelineID, stageID, err.Error())

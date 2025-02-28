@@ -4,12 +4,14 @@ import (
 	"log"
 	"net"
 
+	proto "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto/auth"
+	pipeline_proto "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto/pipeline"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/primary"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
+	// "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	proto "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto"
-	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
-	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
-	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/primary"
 )
 
 func main() {
@@ -18,12 +20,21 @@ func main() {
 	dbRepo := secondary.NewDatabaseAdapter()
 	authService := services.NewAuthService(dbRepo)
 
+	// Initialize pipeline orchestrators
+	// sequentialOrchestrator := domain.NewSequentialPipelineOrchestrator(dbRepo)
+	// parallelOrchestrator := domain.NewParallelPipelineOrchestrator(dbRepo)
+
+	// Initialize pipeline service
+	pipelineService := services.NewPipelineService(nil, nil, dbRepo)
+
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
 	authServer := &primary.AuthServer{AuthService: authService}
+	pipelineServer := &primary.PipelineServer{Service: pipelineService}
 
 	// Register gRPC service
 	proto.RegisterAuthServiceServer(grpcServer, authServer)
+	pipeline_proto.RegisterPipelineServiceServer(grpcServer, pipelineServer)
 	reflection.Register(grpcServer)
 
 	// Start gRPC server

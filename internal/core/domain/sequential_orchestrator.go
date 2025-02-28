@@ -18,9 +18,13 @@ type SequentialPipelineOrchestrator struct {
 	DBAdapter ports.PipelineRepository
 }
 
-func NewSequentialPipelineOrchestrator(dbAdapter ports.PipelineRepository) *SequentialPipelineOrchestrator {
+func NewSequentialPipelineOrchestrator(pipelineID uuid.UUID, dbAdapter ports.PipelineRepository) *SequentialPipelineOrchestrator {
+	if pipelineID == uuid.Nil {
+		log.Fatal("ERROR: Pipeline ID cannot be Nil")
+	}
 	return &SequentialPipelineOrchestrator{
-		ID:        uuid.New(),
+		// ID:        uuid.New(),
+		ID:        pipelineID,
 		Stages:    []Stage{},
 		Status:    make(map[uuid.UUID]string),
 		DBAdapter: dbAdapter,
@@ -35,23 +39,45 @@ func (p *SequentialPipelineOrchestrator) AddStage(stage Stage) error {
 	return nil
 }
  
-func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
+func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
+	// 🚀 **Fix: Ensure stages exist before execution**
+	// if len(p.Stages) == 0 {
+	// 	log.Println("Error: No stages found for execution")
+	// 	return uuid.Nil, nil, errors.New("pipeline has no stages to execute")
+	// }
+
 	// Ensure the user exists before proceeding
 	user, err := p.DBAdapter.GetUserByID(userID)
 	if err != nil {
 		return uuid.Nil, nil, errors.New("user not found")
 	}
 
-	pipelineExecution := &models.PipelineExecution{
-		PipelineID: p.ID,
-		UserID:     user.UserID,
-		Status:     "Running",
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
+	// pipelineExecution := &models.PipelineExecution{
+	// 	// PipelineID: p.ID,
+	// 	PipelineID: pipelineID,
+	// 	UserID:     user.UserID,
+	// 	Status:     "Running",
+	// 	CreatedAt:  time.Now(),
+	// 	UpdatedAt:  time.Now(),
+	// }
 
-	if err := p.DBAdapter.SavePipelineExecution(pipelineExecution); err != nil {
-		return uuid.Nil, nil, err
+	// if err := p.DBAdapter.SavePipelineExecution(pipelineExecution); err != nil {
+	// 	return uuid.Nil, nil, err
+	// }
+
+	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+        PipelineID: pipelineID,
+		UserID:     user.UserID,
+        Status:     "Running",
+        UpdatedAt:  time.Now(),
+    })
+    if err != nil {
+        return uuid.Nil, nil, err
+    }
+
+	if len(p.Stages) == 0 {
+		log.Println("Error: No stages found for execution")
+		return uuid.Nil, nil, errors.New("pipeline has no stages to execute")
 	}
 
 	var result interface{} = input
@@ -63,7 +89,8 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uui
 		result, err = stage.Execute(ctx, result)
 		logEntry := &models.ExecutionLog{
 			StageID:    stage.GetID(),
-			PipelineID: p.ID,
+			// PipelineID: p.ID,
+			PipelineID: pipelineID,
 			Status:     "Completed",
 			Timestamp:  time.Now(),
 		}
@@ -74,7 +101,8 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uui
 			p.rollback(ctx, completedStages, result)
 			// Correctly update status with the right ID
 			updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
-				PipelineID: p.ID,
+				// PipelineID: p.ID,
+				PipelineID: pipelineID,
 				Status:     "Failed",
 				UpdatedAt:  time.Now(),
 			})
@@ -89,14 +117,24 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uui
 	}
 
 	// Step 5: Update Pipeline Execution to Completed
-	updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
-		PipelineID: p.ID,
-		Status:     "Completed",
-		UpdatedAt:  time.Now(),
-	})
-	if updateErr != nil {
-		log.Printf("Failed to update pipeline status: %v", updateErr)
-	}
+	// updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+	// 	// PipelineID: p.ID,
+	// 	PipelineID: pipelineID,
+	// 	Status:     "Completed",
+	// 	UpdatedAt:  time.Now(),
+	// })
+	// if updateErr != nil {
+	// 	log.Printf("Failed to update pipeline status: %v", updateErr)
+	// }
+
+	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
+        PipelineID: pipelineID,
+        Status:     "Completed",
+        UpdatedAt:  time.Now(),
+    })
+    if err != nil {
+        log.Printf("Failed to update pipeline status: %v", err)
+    }
 
 	return uuid.Nil, result, nil
 }

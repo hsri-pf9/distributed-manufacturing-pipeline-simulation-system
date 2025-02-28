@@ -21,10 +21,12 @@ type ParallelPipelineOrchestrator struct {
 }
 
 // NewParallelPipelineOrchestrator initializes a new parallel orchestrator
-func NewParallelPipelineOrchestrator(dbRepo ports.PipelineRepository) *ParallelPipelineOrchestrator {
+func NewParallelPipelineOrchestrator(pipelineID uuid.UUID, dbRepo ports.PipelineRepository) *ParallelPipelineOrchestrator {
 	return &ParallelPipelineOrchestrator{
-		PipelineID: uuid.New(),
+		// PipelineID: uuid.New(),
+		PipelineID: pipelineID,
 		dbRepo:     dbRepo,
+		Stages:     []Stage{},
 	}
 }
 
@@ -40,19 +42,21 @@ func (p *ParallelPipelineOrchestrator) AddStage(stage Stage) error {
 }
 
 // Execute runs all stages concurrently and logs execution details in the database
-func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
+func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
 	// Step 1: Validate user existence
 	user, err := p.dbRepo.GetUserByID(userID)
 	if err != nil {
 		log.Printf("Failed to validate user existence: %v", err)
-		return p.PipelineID, nil, err
+		// return p.PipelineID, nil, err
+		return pipelineID, nil, err
 	}
 	if user == nil {
-		return p.PipelineID, nil, errors.New("user does not exist")
+		return pipelineID, nil, errors.New("user does not exist")
 	}
 	// Step 1: Create a new pipeline execution record in DB
 	pipelineExecution := &models.PipelineExecution{
-		PipelineID: p.PipelineID,
+		// PipelineID: p.PipelineID,
+		PipelineID: pipelineID,
 		UserID:     userID,
 		Status:     "Running",
 		CreatedAt:  time.Now(),
@@ -61,7 +65,7 @@ func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.
 
 	if err := p.dbRepo.SavePipelineExecution(pipelineExecution); err != nil {
 		log.Printf("Failed to save pipeline execution: %v", err)
-		return p.PipelineID, nil, err
+		return pipelineID, nil, err
 	}
 
 	// Step 2: Execute stages in parallel
@@ -78,7 +82,7 @@ func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.
 
 			logEntry := &models.ExecutionLog{
 				StageID:    stage.GetID(),
-				PipelineID: p.PipelineID,
+				PipelineID: pipelineID,
 				Status:     "Completed",
 				Timestamp:  time.Now(),
 			}
@@ -110,7 +114,7 @@ func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.
 		if err := p.dbRepo.UpdatePipelineExecution(pipelineExecution); err != nil {
 			log.Printf("Failed to update pipeline execution status: %v", err)
 		}
-		return p.PipelineID, nil, errors.New("pipeline execution failed")
+		return pipelineID, nil, errors.New("pipeline execution failed")
 	}
 
 	pipelineExecution.Status = "Completed"
@@ -119,9 +123,9 @@ func (p *ParallelPipelineOrchestrator) Execute(ctx context.Context, userID uuid.
 	}
 
 	if len(results) == 0 {
-		return p.PipelineID, nil, errors.New("no valid results from pipeline stages")
+		return pipelineID, nil, errors.New("no valid results from pipeline stages")
 	}
-	return p.PipelineID, results, nil
+	return pipelineID, results, nil
 }
 
 // GetStatus retrieves the status of a pipeline from the database
@@ -131,11 +135,38 @@ func (p *ParallelPipelineOrchestrator) GetStatus(pipelineID uuid.UUID) (string, 
 
 // Cancel updates the pipeline execution status to "Canceled"
 func (p *ParallelPipelineOrchestrator) Cancel(pipelineID uuid.UUID, userID uuid.UUID) error {
-	pipelineExecution := &models.PipelineExecution{
-		PipelineID: pipelineID,
-		UserID:     userID,
-		Status:     "Canceled",
-		UpdatedAt:  time.Now(),
+	log.Printf("Cancelling pipeline: %s for user: %s", pipelineID, userID)
+
+	status, err := p.dbRepo.GetPipelineStatus(pipelineID.String())
+	if err != nil {
+		log.Printf("Error fetching pipeline status: %v", err)
+		return errors.New("pipeline not found")
 	}
-	return p.dbRepo.UpdatePipelineExecution(pipelineExecution)
+
+	if status == "Completed" {
+		log.Printf("Pipeline %s is already completed, cannot cancel", pipelineID)
+		return errors.New("cannot cancel a completed pipeline")
+	}
+	log.Printf("Cancelling pipeline %s...", pipelineID)
+	// pipelineExecution := &models.PipelineExecution{
+	// 	PipelineID: pipelineID,
+	// 	UserID:     userID,
+	// 	Status:     "Canceled",
+	// 	UpdatedAt:  time.Now(),
+	// }
+	// return p.dbRepo.UpdatePipelineExecution(pipelineExecution)
+
+	err = p.dbRepo.UpdatePipelineExecution(&models.PipelineExecution{
+		PipelineID: pipelineID, // ✅ Ensure correct pipeline ID
+		Status:     "Cancelled",
+		UpdatedAt:  time.Now(),
+	})
+
+	if err != nil {
+		log.Printf("Failed to update pipeline status: %v", err)
+		return errors.New("failed to update pipeline status")
+	}
+
+	log.Printf("Pipeline %s successfully cancelled", pipelineID)
+	return nil
 }

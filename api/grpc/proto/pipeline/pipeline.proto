@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto/pipeline";
+
+import "google/protobuf/any.proto";
+
+// Service Definition
+service PipelineService {
+    rpc CreatePipeline(CreatePipelineRequest) returns (CreatePipelineResponse);
+    rpc StartPipeline(StartPipelineRequest) returns (StartPipelineResponse);
+    rpc GetPipelineStatus(GetPipelineStatusRequest) returns (GetPipelineStatusResponse);
+    rpc CancelPipeline(CancelPipelineRequest) returns (CancelPipelineResponse);
+}
+
+// Message Definitions
+message CreatePipelineRequest {
+    int32 stages = 1;
+    bool is_parallel = 2;
+    string user_id = 3;  // Changed from UUID to string
+}
+
+message CreatePipelineResponse {
+    string pipeline_id = 1;
+}
+
+message StartPipelineRequest {
+    string pipeline_id = 1;
+    google.protobuf.Any input = 2;
+    bool is_parallel = 3;
+    string user_id = 4;  // Changed from UUID to string
+}
+
+message StartPipelineResponse {
+    string message = 1;
+}
+
+message GetPipelineStatusRequest {
+    string pipeline_id = 1;
+    bool is_parallel = 2;
+}
+
+message GetPipelineStatusResponse {
+    string pipeline_id = 1;
+    string status = 2;
+}
+
+message CancelPipelineRequest {
+    string pipeline_id = 1;
+    bool is_parallel = 2;
+    string user_id = 3;  // Changed from UUID to string
+}
+
+message CancelPipelineResponse {
+    string message = 1;
+}
