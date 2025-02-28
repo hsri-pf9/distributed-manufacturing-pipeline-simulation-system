@@ -18,10 +18,6 @@ func main() {
 	// Initialize database repository
 	dbRepo := secondary.NewDatabaseAdapter()
 
-	// Initialize pipeline orchestrators
-	// sequentialOrchestrator := domain.NewSequentialPipelineOrchestrator(dbRepo)
-	// parallelOrchestrator := domain.NewParallelPipelineOrchestrator(dbRepo)
-
 	// Initialize pipeline service
 	pipelineService := services.NewPipelineService(dbRepo)
 

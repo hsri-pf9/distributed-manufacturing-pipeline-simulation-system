@@ -40,30 +40,12 @@ func (p *SequentialPipelineOrchestrator) AddStage(stage Stage) error {
 }
  
 func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}) (uuid.UUID, interface{}, error) {
-	// 🚀 **Fix: Ensure stages exist before execution**
-	// if len(p.Stages) == 0 {
-	// 	log.Println("Error: No stages found for execution")
-	// 	return uuid.Nil, nil, errors.New("pipeline has no stages to execute")
-	// }
 
 	// Ensure the user exists before proceeding
 	user, err := p.DBAdapter.GetUserByID(userID)
 	if err != nil {
 		return uuid.Nil, nil, errors.New("user not found")
 	}
-
-	// pipelineExecution := &models.PipelineExecution{
-	// 	// PipelineID: p.ID,
-	// 	PipelineID: pipelineID,
-	// 	UserID:     user.UserID,
-	// 	Status:     "Running",
-	// 	CreatedAt:  time.Now(),
-	// 	UpdatedAt:  time.Now(),
-	// }
-
-	// if err := p.DBAdapter.SavePipelineExecution(pipelineExecution); err != nil {
-	// 	return uuid.Nil, nil, err
-	// }
 
 	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
         PipelineID: pipelineID,
@@ -116,17 +98,6 @@ func (p *SequentialPipelineOrchestrator) Execute(ctx context.Context, userID uui
 		completedStages = append(completedStages, stage)
 	}
 
-	// Step 5: Update Pipeline Execution to Completed
-	// updateErr := p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
-	// 	// PipelineID: p.ID,
-	// 	PipelineID: pipelineID,
-	// 	Status:     "Completed",
-	// 	UpdatedAt:  time.Now(),
-	// })
-	// if updateErr != nil {
-	// 	log.Printf("Failed to update pipeline status: %v", updateErr)
-	// }
-
 	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
         PipelineID: pipelineID,
         Status:     "Completed",
@@ -164,11 +135,6 @@ func (p *SequentialPipelineOrchestrator) Cancel(pipelineID uuid.UUID, userID uui
 
 	// Step 3: Update Status to Cancelled
 	log.Printf("Cancelling pipeline %s...", pipelineID)
-	// return p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
-	// 	PipelineID: pipelineID,
-	// 	Status:     "Cancelled",
-	// 	UpdatedAt:  time.Now(),
-	// })
 	err = p.DBAdapter.UpdatePipelineExecution(&models.PipelineExecution{
 		PipelineID: pipelineID,
 		Status:     "Cancelled",

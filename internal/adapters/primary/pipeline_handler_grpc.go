@@ -35,57 +35,6 @@ func (s *PipelineServer) CreatePipeline(ctx context.Context, req *proto.CreatePi
 	return &proto.CreatePipelineResponse{PipelineId: pipelineID.String()}, nil
 }
 
-// func (s *PipelineServer) StartPipeline(ctx context.Context, req *proto.StartPipelineRequest) (*proto.StartPipelineResponse, error) {
-// 	// Parse pipeline ID
-// 	pipelineID, err := uuid.Parse(req.PipelineId)
-// 	if err != nil {
-// 		return nil, status.Errorf(codes.InvalidArgument, "Invalid pipeline ID: %v", err)
-// 	}
-
-// 	// Parse user ID
-// 	userID, err := uuid.Parse(req.UserId)
-// 	if err != nil {
-// 		return nil, status.Errorf(codes.InvalidArgument, "Invalid user ID: %v", err)
-// 	}
-
-// 	// Ensure user ID is not empty
-// 	if userID == uuid.Nil {
-// 		return nil, status.Error(codes.InvalidArgument, "User ID is required")
-// 	}
-
-// 	// Process input data correctly
-// 	var input interface{}
-// 	if req.Input != nil {
-// 		// Try to unpack as a StringValue
-// 		stringWrapper := &wrapperspb.StringValue{}
-// 		if err := req.Input.UnmarshalTo(stringWrapper); err == nil {
-// 			input = stringWrapper.Value
-// 		} else {
-// 			// Try to unpack as a struct (JSON object)
-// 			structValue := &structpb.Struct{}
-// 			if err := req.Input.UnmarshalTo(structValue); err == nil {
-// 				input = structValue.AsMap()
-// 			} else {
-// 				log.Printf("Failed to unpack input: %v", err)
-// 				return nil, status.Errorf(codes.InvalidArgument, "Invalid input format: %v", err)
-// 			}
-// 		}
-// 	}
-
-// 	// Run the pipeline asynchronously
-// 	go func() {
-// 		err := s.Service.StartPipeline(context.Background(), userID, pipelineID, input, req.IsParallel)
-// 		if err != nil {
-// 			log.Printf("Failed to start pipeline %s: %v", pipelineID, err)
-// 		}
-// 	}()
-
-// 	// Return response
-// 	return &proto.StartPipelineResponse{
-// 		Message: "Pipeline execution started",
-// 	}, nil
-// }
-
 func (s *PipelineServer) StartPipeline(ctx context.Context, req *proto.StartPipelineRequest) (*proto.StartPipelineResponse, error) {
 	log.Println("[GRPC] Received StartPipeline request...")
 

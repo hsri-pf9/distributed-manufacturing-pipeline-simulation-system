@@ -13,12 +13,6 @@ import (
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/models"
 )
 
-// type PipelineService struct {
-// 	SequentialOrchestrator *domain.SequentialPipelineOrchestrator
-// 	ParallelOrchestrator   *domain.ParallelPipelineOrchestrator
-// 	Repository             ports.PipelineRepository
-// }
-
 type PipelineService struct {
 	SequentialOrchestrators map[uuid.UUID]*domain.SequentialPipelineOrchestrator
 	ParallelOrchestrators   map[uuid.UUID]*domain.ParallelPipelineOrchestrator
@@ -26,14 +20,6 @@ type PipelineService struct {
 	mu                     sync.RWMutex
 }
 
-
-// func NewPipelineService(sequential *domain.SequentialPipelineOrchestrator, parallel *domain.ParallelPipelineOrchestrator, repo ports.PipelineRepository) *PipelineService {
-// 	return &PipelineService{
-// 		SequentialOrchestrator: sequential,
-// 		ParallelOrchestrator:   parallel,
-// 		Repository:             repo,
-// 	}
-// }
 func NewPipelineService(repo ports.PipelineRepository) *PipelineService {
 	return &PipelineService{
 		SequentialOrchestrators: make(map[uuid.UUID]*domain.SequentialPipelineOrchestrator),
@@ -44,24 +30,6 @@ func NewPipelineService(repo ports.PipelineRepository) *PipelineService {
 
 func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isParallel bool) (uuid.UUID, error) {
 	pipelineID := uuid.New()
-
-	// var orchestrator domain.PipelineOrchestrator
-	// if isParallel {
-	// 	ps.ParallelOrchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
-	// 	orchestrator = ps.ParallelOrchestrator
-	// } else {
-	// 	ps.SequentialOrchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
-	// 	orchestrator = ps.SequentialOrchestrator
-	// }
-
-	// var orchestrator domain.PipelineOrchestrator
-	// if isParallel {
-	// 	orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
-	// 	ps.ParallelOrchestrator = orchestrator.(*domain.ParallelPipelineOrchestrator)
-	// } else {
-	// 	orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
-	// 	ps.SequentialOrchestrator = orchestrator.(*domain.SequentialPipelineOrchestrator)
-	// }
 
 	ps.mu.Lock()
 	var orchestrator domain.PipelineOrchestrator
@@ -97,44 +65,6 @@ func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isPa
 	return pipelineID, nil
 }
 
-// func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}, isParallel bool) error {
-// 	var orchestrator domain.PipelineOrchestrator
-// 	if isParallel {
-// 		orchestrator = ps.ParallelOrchestrator
-// 	} else {
-// 		orchestrator = ps.SequentialOrchestrator
-// 	}
-
-// 	if orchestrator == nil {
-// 		return errors.New("orchestrator not initialized for this pipeline")
-// 	}
-
-// 	// 🚀 **Fix: Ensure pipeline exists before execution**
-// 	status, err := ps.Repository.GetPipelineStatus(pipelineID.String())
-// 	if err != nil || status != "Created" {
-// 		return errors.New("invalid pipeline status: " + status)
-// 	}
-
-// 	// 🚀 **Fix: Ensure stages are present before execution**
-// 	if len(orchestrator.(*domain.SequentialPipelineOrchestrator).Stages) == 0 {
-// 		return errors.New("no stages found for this pipeline execution")
-// 	}
-
-
-// 	if err := ps.updatePipelineStatus(pipelineID, "Running"); err != nil {
-// 		return err
-// 	}
-
-// 	stageID, _, err := orchestrator.Execute(ctx, userID, pipelineID, input)
-// 	if err != nil {
-// 		_ = ps.updatePipelineStatus(pipelineID, "Failed")
-// 		ps.logExecutionError(pipelineID, stageID, err.Error())
-// 		return err
-// 	}
-
-// 	return ps.updatePipelineStatus(pipelineID, "Completed")
-// }
-
 // ✅ Start pipeline execution based on pipeline ID
 func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}, isParallel bool) error {
 	ps.mu.RLock()
@@ -158,11 +88,6 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 	if status != "Created" && status != "Paused" {
 		return errors.New("invalid pipeline status: " + status)
 	}
-
-	// // ✅ Validate if the pipeline has stages before execution
-	// if orchestrator.StageCount() == 0 {
-	// 	return errors.New("no stages found for this pipeline execution")
-	// }
 	// 🚀 **Fix: Ensure stages are present before execution**
 	switch o := orchestrator.(type) {
 	case *domain.SequentialPipelineOrchestrator:
@@ -191,21 +116,6 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 	return ps.updatePipelineStatus(pipelineID, "Completed")
 }
 
-// func (ps *PipelineService) GetPipelineStatus(pipelineID uuid.UUID) (string, error) {
-// 	return ps.Repository.GetPipelineStatus(pipelineID.String())
-// }
-
-// func (ps *PipelineService) GetPipelineStatus(pipelineID uuid.UUID, isParallel bool) (string, error) {
-// 	var orchestrator domain.PipelineOrchestrator
-// 	if isParallel {
-// 		orchestrator = ps.ParallelOrchestrator
-// 	} else {
-// 		orchestrator = ps.SequentialOrchestrator
-// 	}
-
-// 	return orchestrator.GetStatus(pipelineID)
-// }
-
 // ✅ Retrieve pipeline status
 func (ps *PipelineService) GetPipelineStatus(pipelineID uuid.UUID, isParallel bool) (string, error) {
 	ps.mu.RLock()
@@ -223,27 +133,6 @@ func (ps *PipelineService) GetPipelineStatus(pipelineID uuid.UUID, isParallel bo
 
 	return orchestrator.GetStatus(pipelineID)
 }
-
-// func (ps *PipelineService) CancelPipeline(pipelineID uuid.UUID) error {
-// 	return ps.updatePipelineStatus(pipelineID, "Canceled")
-// }
-// func (ps *PipelineService) CancelPipeline(pipelineID uuid.UUID, userID uuid.UUID, isParallel bool) error {
-// 	var orchestrator domain.PipelineOrchestrator
-// 	if isParallel {
-// 		orchestrator = ps.ParallelOrchestrator
-// 	} else {
-// 		orchestrator = ps.SequentialOrchestrator
-// 	}
-// 	log.Printf("Cancelling pipeline: %s by user: %s", pipelineID, userID)
-
-// 	// return orchestrator.Cancel(pipelineID, userID)
-// 	err := orchestrator.Cancel(pipelineID, userID)
-//     if err != nil {
-//         log.Printf("Failed to cancel pipeline: %v", err)
-//     }
-
-//     return err
-// }
 
 // ✅ Cancel pipeline execution
 func (ps *PipelineService) CancelPipeline(pipelineID uuid.UUID, userID uuid.UUID, isParallel bool) error {
