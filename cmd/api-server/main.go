@@ -23,7 +23,7 @@ func main() {
 	// parallelOrchestrator := domain.NewParallelPipelineOrchestrator(dbRepo)
 
 	// Initialize pipeline service
-	pipelineService := services.NewPipelineService(nil, nil, dbRepo)
+	pipelineService := services.NewPipelineService(dbRepo)
 
 	// email := "harshsrivastava2404@gmail.com"
 	// password := "harsh123"

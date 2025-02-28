@@ -25,7 +25,7 @@ func main() {
 	// parallelOrchestrator := domain.NewParallelPipelineOrchestrator(dbRepo)
 
 	// Initialize pipeline service
-	pipelineService := services.NewPipelineService(nil, nil, dbRepo)
+	pipelineService := services.NewPipelineService(dbRepo)
 
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
