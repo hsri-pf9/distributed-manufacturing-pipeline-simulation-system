@@ -8,6 +8,7 @@ import (
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/rest"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
 	// "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
+	"github.com/gin-contrib/cors"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
 )
 
@@ -31,6 +32,14 @@ func main() {
 	authHandler := &rest.AuthHandler{Service: authService}
 	// Setup Gin router
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // Allows requests from any origin (including Postman Web & React)
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
+
 	r.POST("/register", gin.WrapF(authHandler.RegisterHandler))
 	r.POST("/login", gin.WrapF(authHandler.LoginHandler))
 

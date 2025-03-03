@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
@@ -82,18 +83,24 @@ func NewAuthService(repo ports.PipelineRepository) *AuthService {
 // }
 
 func (s *AuthService) RegisterUser(email, password string) (string, string, string, error) {
+	log.Printf("[DEBUG] RegisterUser called with Email: %s", email)
+
 	user, err := s.SupabaseClient.Auth.SignUp(context.Background(), supabase.UserCredentials{
 		Email:    email,
 		Password: password,
 	})
 	if err != nil {
+		log.Printf("[ERROR] Supabase SignUp failed: %v", err) // Log error
 		return "", "", "", errors.New("registration failed: " + err.Error())
 	}
 
 	if user == nil {
+		log.Printf("[ERROR] Unexpected response from Supabase: user is nil") // Log if user is nil
 		return "", "", "", errors.New("unexpected response from Supabase: user is nil")
 	}
 
+	// ✅ Wait for the email confirmation before proceeding
+	log.Println("[INFO] Registration successful. Waiting for email confirmation.")
 	// ✅ Wait for the email confirmation before proceeding
 	fmt.Println("Please confirm your email before proceeding.")
 

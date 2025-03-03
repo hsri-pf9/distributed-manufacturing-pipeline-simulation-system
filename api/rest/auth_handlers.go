@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/json"
 	"net/http"
+	"log"
 
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
 )
@@ -30,12 +31,16 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	// Debug: Print received data
+	log.Printf("Received Register Request: Email=%s, Password=%s", creds.Email, creds.Password)
 
 	userID, email, token, err := h.Service.RegisterUser(creds.Email, creds.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Debug: Print success
+	log.Printf("User Registered Successfully: ID=%s, Email=%s", userID, email)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
