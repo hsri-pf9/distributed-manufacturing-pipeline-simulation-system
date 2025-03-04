@@ -30,11 +30,12 @@ func main() {
 	// Initialize REST API handler
 	handler := &rest.PipelineHandler{Service: pipelineService}
 	authHandler := &rest.AuthHandler{Service: authService}
+	userHandler := &rest.UserHandler{Service: authService} // New user handler
 	// Setup Gin router
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Allows requests from any origin (including Postman Web & React)
+		AllowOrigins:     []string{"http://localhost:3000"}, // Allows requests from any origin (including Postman Web & React)
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -43,7 +44,13 @@ func main() {
 	r.POST("/register", gin.WrapF(authHandler.RegisterHandler))
 	r.POST("/login", gin.WrapF(authHandler.LoginHandler))
 
-	r.POST("/pipelines", handler.CreatePipeline)
+	// User profile routes
+	r.GET("/user/:id", userHandler.GetUserProfile)  // Fetch user profile
+	r.PUT("/user/:id", userHandler.UpdateUserProfile) // Update user profil
+	r.GET("/pipelines", handler.GetUserPipelines)
+
+
+	r.POST("/createpipelines", handler.CreatePipeline)
 	r.POST("/pipelines/:id/start", handler.StartPipeline)
 	r.GET("/pipelines/:id/status", handler.GetPipelineStatus)
 	r.POST("/pipelines/:id/cancel", handler.CancelPipeline)

@@ -182,3 +182,7 @@ func (ps *PipelineService) logExecutionError(pipelineID uuid.UUID, stageID uuid.
 		log.Printf("Failed to log execution error: %v", logErr)
 	}
 }
+
+func (ps *PipelineService) GetPipelinesByUser(userID string) ([]models.PipelineExecution, error) {
+	return ps.Repository.GetPipelinesByUser(userID)
+}

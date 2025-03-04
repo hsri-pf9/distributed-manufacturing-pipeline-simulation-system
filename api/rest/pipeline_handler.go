@@ -142,3 +142,19 @@ func (h *PipelineHandler) CancelPipeline(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pipeline cancelled", "pipeline_id": pipelineID})
 }
+
+func (h *PipelineHandler) GetUserPipelines(c *gin.Context) {
+	userID := c.Query("user_id") // Fetch user_id from query parameters
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	pipelines, err := h.Service.GetPipelinesByUser(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pipelines"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pipelines)
+}

@@ -28,6 +28,11 @@ func (d *DatabaseAdapter) GetUserByID(userID uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
+// UpdateUser updates user details
+func (d *DatabaseAdapter) UpdateUser(userID uuid.UUID, updates map[string]interface{}) error {
+	return DB.Model(&models.User{}).Where("user_id = ?", userID).Updates(updates).Error
+}
+
 func (d *DatabaseAdapter) SavePipelineExecution(execution *models.PipelineExecution) error {
 	return DB.Create(execution).Error
 }
@@ -46,4 +51,11 @@ func (d *DatabaseAdapter) GetPipelineStatus(pipelineID string) (string, error) {
 		return "", err
 	}
 	return execution.Status, nil
+}
+
+// GetPipelinesByUser retrieves all pipelines for a specific user
+func (d *DatabaseAdapter) GetPipelinesByUser(userID string) ([]models.PipelineExecution, error) {
+	var pipelines []models.PipelineExecution
+	err := DB.Where("user_id = ?", userID).Find(&pipelines).Error
+	return pipelines, err
 }

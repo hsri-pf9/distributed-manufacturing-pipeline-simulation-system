@@ -144,3 +144,12 @@ func (s *AuthService) LoginUser(email, password string) (string, string, string,
 	return session.User.ID, session.User.Email, session.AccessToken, nil
 }
 
+// GetUserByID fetches user details
+func (s *AuthService) GetUserByID(userID uuid.UUID) (*models.User, error) {
+	return s.Repo.GetUserByID(userID)
+}
+
+// UpdateUser updates user details
+func (s *AuthService) UpdateUser(userID uuid.UUID, updates map[string]interface{}) error {
+	return s.Repo.UpdateUser(userID, updates)
+}

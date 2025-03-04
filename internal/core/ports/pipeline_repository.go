@@ -12,4 +12,6 @@ type PipelineRepository interface {
 
 	GetUserByID(userID uuid.UUID) (*models.User, error)
 	SaveUser(user *models.User) error
+	UpdateUser(userID uuid.UUID, updates map[string]interface{}) error 
+	GetPipelinesByUser(userID string) ([]models.PipelineExecution, error)
 }

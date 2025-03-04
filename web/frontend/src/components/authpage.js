@@ -4,6 +4,7 @@ import { TextField, Button, Select, MenuItem, Typography, Container, Box, AppBar
 import axios from "axios";
 import Dashboard from "../dashboard/dashboard";
 
+
 const AuthLayout = ({ children, title }) => {
   return (
     <Container maxWidth="sm">
@@ -58,9 +59,30 @@ const LoginPage = ({ apiType }) => {
     setMessage("");
     if (apiType === "rest") {
       try {
-        await axios.post("http://localhost:8080/login", { email, password });
+        const response = await axios.post(
+          "http://localhost:8080/login",
+          { email, password },
+          {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true, // ✅ Ensure cross-origin cookies are included
+          }
+        );
+  
+        // ✅ Extract user_id, email, and token correctly
+        const { user_id, token } = response.data;
+        console.log("Full Response from Backend:", response.data);
+        if (!user_id || !email || !token) throw new Error("Invalid response from backend");
+  
+        console.log("User ID:", user_id);
+  
+        // ✅ Store user_id and token for session persistence
+        localStorage.setItem("user_id", user_id);
+        localStorage.setItem("email", email);
+        localStorage.setItem("token", token);
+  
         navigate("/dashboard");
-      } catch {
+      } catch (error) {
+        console.error("Login failed:", error);
         setMessage("Login failed. Please check your credentials.");
       }
     } else {
@@ -68,6 +90,7 @@ const LoginPage = ({ apiType }) => {
       setMessage("Check console for gRPC login command.");
     }
   };
+  
 
   return (
     <AuthLayout title="Login">
