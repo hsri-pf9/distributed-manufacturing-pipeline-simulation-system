@@ -1,68 +1,107 @@
 import React, { useState } from "react";
-import { TextField, Button, Select, MenuItem, Typography, Container, Box } from "@mui/material";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import { TextField, Button, Select, MenuItem, Typography, Container, Box, AppBar, Toolbar } from "@mui/material";
 import axios from "axios";
+import Dashboard from "../dashboard/dashboard";
 
-const AuthPage = () => {
-  const [apiType, setApiType] = useState("rest");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-
-  const handleRegister = async () => {
-    setMessage("");
-    if (apiType === "rest") {
-      try {
-        const response = await axios.post("http://localhost:8080/register", {
-          email,
-          password,
-        });
-        setMessage(response.data.message);
-      } catch (error) {
-        setMessage("Registration failed. Please try again.");
-      }
-    } else {
-      const grpcurl = `grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Register`;
-      console.log("Run this gRPC command manually:", grpcurl);
-      setMessage("Open your email and click the link to authenticate.");
-    }
-  };
-
-  const handleLogin = async () => {
-    setMessage("");
-    if (apiType === "rest") {
-      try {
-        const response = await axios.post("http://localhost:8080/login", {
-          email,
-          password,
-        });
-        setMessage("Login successful!");
-      } catch (error) {
-        setMessage("Login failed. Please check your credentials.");
-      }
-    } else {
-      const grpcurl = `grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Login`;
-      console.log("Run this gRPC command manually:", grpcurl);
-      setMessage("Check console for gRPC login command.");
-    }
-  };
-
+const AuthLayout = ({ children, title }) => {
   return (
     <Container maxWidth="sm">
-      <Box sx={{ textAlign: "center", mt: 5 }}>
-        <Typography variant="h4">Select API Type</Typography>
-        <Select value={apiType} onChange={(e) => setApiType(e.target.value)} fullWidth>
-          <MenuItem value="rest">REST API</MenuItem>
-          <MenuItem value="grpc">gRPC</MenuItem>
-        </Select>
-        <Typography variant="h5" sx={{ mt: 3 }}>Authentication</Typography>
-        <TextField label="Email" fullWidth margin="normal" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <Button variant="contained" color="primary" fullWidth onClick={handleRegister} sx={{ mt: 2 }}>Register</Button>
-        <Button variant="contained" color="secondary" fullWidth onClick={handleLogin} sx={{ mt: 2 }}>Login</Button>
-        {message && <Typography sx={{ mt: 2, color: "green" }}>{message}</Typography>}
+      <Box sx={{ textAlign: "center", mt: 5, p: 4, boxShadow: 3, borderRadius: 2 }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>{title}</Typography>
+        {children}
       </Box>
     </Container>
   );
 };
 
-export default AuthPage;
+const RegisterPage = ({ apiType }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
+
+  const handleRegister = async () => {
+    setMessage("");
+    if (apiType === "rest") {
+      try {
+        await axios.post("http://localhost:8080/register", { email, password });
+        setMessage("Registration successful! Please check your email to verify.");
+        window.open("https://mail.google.com", "_blank");
+      } catch {
+        setMessage("Registration failed. Please try again.");
+      }
+    } else {
+      console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Register`);
+      setMessage("Open your email and click the link to authenticate.");
+    }
+  };
+
+  return (
+    <AuthLayout title="Register">
+      <TextField label="Email" fullWidth margin="normal" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <Button variant="contained" color="primary" fullWidth onClick={handleRegister} sx={{ mt: 2 }}>Register</Button>
+      {message && <Typography sx={{ mt: 2, color: "green" }}>{message}</Typography>}
+      <Typography sx={{ mt: 2 }}>Already registered? <Link to="/login">Login</Link></Typography>
+    </AuthLayout>
+  );
+};
+
+const LoginPage = ({ apiType }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = async () => {
+    setMessage("");
+    if (apiType === "rest") {
+      try {
+        await axios.post("http://localhost:8080/login", { email, password });
+        navigate("/dashboard");
+      } catch {
+        setMessage("Login failed. Please check your credentials.");
+      }
+    } else {
+      console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Login`);
+      setMessage("Check console for gRPC login command.");
+    }
+  };
+
+  return (
+    <AuthLayout title="Login">
+      <TextField label="Email" fullWidth margin="normal" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <Button variant="contained" color="primary" fullWidth onClick={handleLogin} sx={{ mt: 2 }}>Login</Button>
+      {message && <Typography sx={{ mt: 2, color: "red" }}>{message}</Typography>}
+      <Typography sx={{ mt: 2 }}>Do not have an account? <Link to="/register">Register</Link></Typography>
+    </AuthLayout>
+  );
+};
+
+const App = () => {
+  const [apiType, setApiType] = useState("rest");
+
+  return (
+    <Router>
+      <AppBar position="static">
+        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Typography variant="h6">Distributed Manufacturing System</Typography>
+          <Select value={apiType} onChange={(e) => setApiType(e.target.value)} sx={{ color: "white", backgroundColor: "gray" }}>
+            <MenuItem value="rest">REST API</MenuItem>
+            <MenuItem value="grpc">gRPC</MenuItem>
+          </Select>
+        </Toolbar>
+      </AppBar>
+      <Routes>
+        <Route path="/register" element={<RegisterPage apiType={apiType} />} />
+        <Route path="/login" element={<LoginPage apiType={apiType} />} />
+        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/" element={<RegisterPage apiType={apiType} />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
