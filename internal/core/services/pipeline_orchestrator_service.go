@@ -66,75 +66,15 @@ func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isPa
 }
 
 // ✅ Start pipeline execution based on pipeline ID
-// func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}, isParallel bool) error {
-// 	ps.mu.RLock()
-// 	var orchestrator domain.PipelineOrchestrator
-// 	if isParallel {
-// 		orchestrator = ps.ParallelOrchestrators[pipelineID]
-// 	} else {
-// 		orchestrator = ps.SequentialOrchestrators[pipelineID]
-// 	}
-// 	ps.mu.RUnlock()
-
-// 	if orchestrator == nil {
-// 		return errors.New("orchestrator not initialized for this pipeline")
-// 	}
-
-// 	status, err := ps.Repository.GetPipelineStatus(pipelineID.String())
-// 	if err != nil {
-// 		log.Printf("Failed to get pipeline status: %v", err)
-// 		return err
-// 	}
-// 	if status != "Created" && status != "Paused" {
-// 		return errors.New("invalid pipeline status: " + status)
-// 	}
-// 	// 🚀 **Fix: Ensure stages are present before execution**
-// 	switch o := orchestrator.(type) {
-// 	case *domain.SequentialPipelineOrchestrator:
-// 		if len(o.Stages) == 0 {
-// 			return errors.New("no stages found for this pipeline execution")
-// 		}
-// 	case *domain.ParallelPipelineOrchestrator:
-// 		if len(o.Stages) == 0 {
-// 			return errors.New("no stages found for this pipeline execution")
-// 		}
-// 	default:
-// 		return errors.New("unknown orchestrator type")
-// 	}
-
-// 	if err := ps.updatePipelineStatus(pipelineID, "Running"); err != nil {
-// 		return err
-// 	}
-
-// 	stageID, _, err := orchestrator.Execute(ctx, userID, pipelineID, input)
-// 	if err != nil {
-// 		_ = ps.updatePipelineStatus(pipelineID, "Failed")
-// 		ps.logExecutionError(pipelineID, stageID, err.Error())
-// 		return err
-// 	}
-
-// 	return ps.updatePipelineStatus(pipelineID, "Completed")
-// }
-
 func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}, isParallel bool) error {
-	ps.mu.Lock()
+	ps.mu.RLock()
 	var orchestrator domain.PipelineOrchestrator
 	if isParallel {
 		orchestrator = ps.ParallelOrchestrators[pipelineID]
-		if orchestrator == nil {
-			log.Printf("[WARNING] Orchestrator missing for pipeline %s. Rebuilding...", pipelineID)
-			orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
-			ps.ParallelOrchestrators[pipelineID] = orchestrator.(*domain.ParallelPipelineOrchestrator)
-		}
 	} else {
 		orchestrator = ps.SequentialOrchestrators[pipelineID]
-		if orchestrator == nil {
-			log.Printf("[WARNING] Orchestrator missing for pipeline %s. Rebuilding...", pipelineID)
-			orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
-			ps.SequentialOrchestrators[pipelineID] = orchestrator.(*domain.SequentialPipelineOrchestrator)
-		}
 	}
-	ps.mu.Unlock()
+	ps.mu.RUnlock()
 
 	if orchestrator == nil {
 		return errors.New("orchestrator not initialized for this pipeline")
@@ -148,8 +88,7 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 	if status != "Created" && status != "Paused" {
 		return errors.New("invalid pipeline status: " + status)
 	}
-
-	// Ensure pipeline has stages before execution
+	// 🚀 **Fix: Ensure stages are present before execution**
 	switch o := orchestrator.(type) {
 	case *domain.SequentialPipelineOrchestrator:
 		if len(o.Stages) == 0 {
@@ -176,6 +115,67 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 
 	return ps.updatePipelineStatus(pipelineID, "Completed")
 }
+
+// func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, pipelineID uuid.UUID, input interface{}, isParallel bool) error {
+// 	ps.mu.Lock()
+// 	var orchestrator domain.PipelineOrchestrator
+// 	if isParallel {
+// 		orchestrator = ps.ParallelOrchestrators[pipelineID]
+// 		if orchestrator == nil {
+// 			log.Printf("[WARNING] Orchestrator missing for pipeline %s. Rebuilding...", pipelineID)
+// 			orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
+// 			ps.ParallelOrchestrators[pipelineID] = orchestrator.(*domain.ParallelPipelineOrchestrator)
+// 		}
+// 	} else {
+// 		orchestrator = ps.SequentialOrchestrators[pipelineID]
+// 		if orchestrator == nil {
+// 			log.Printf("[WARNING] Orchestrator missing for pipeline %s. Rebuilding...", pipelineID)
+// 			orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
+// 			ps.SequentialOrchestrators[pipelineID] = orchestrator.(*domain.SequentialPipelineOrchestrator)
+// 		}
+// 	}
+// 	ps.mu.Unlock()
+
+// 	if orchestrator == nil {
+// 		return errors.New("orchestrator not initialized for this pipeline")
+// 	}
+
+// 	status, err := ps.Repository.GetPipelineStatus(pipelineID.String())
+// 	if err != nil {
+// 		log.Printf("Failed to get pipeline status: %v", err)
+// 		return err
+// 	}
+// 	if status != "Created" && status != "Paused" {
+// 		return errors.New("invalid pipeline status: " + status)
+// 	}
+
+// 	// Ensure pipeline has stages before execution
+// 	switch o := orchestrator.(type) {
+// 	case *domain.SequentialPipelineOrchestrator:
+// 		if len(o.Stages) == 0 {
+// 			return errors.New("no stages found for this pipeline execution")
+// 		}
+// 	case *domain.ParallelPipelineOrchestrator:
+// 		if len(o.Stages) == 0 {
+// 			return errors.New("no stages found for this pipeline execution")
+// 		}
+// 	default:
+// 		return errors.New("unknown orchestrator type")
+// 	}
+
+// 	if err := ps.updatePipelineStatus(pipelineID, "Running"); err != nil {
+// 		return err
+// 	}
+
+// 	stageID, _, err := orchestrator.Execute(ctx, userID, pipelineID, input)
+// 	if err != nil {
+// 		_ = ps.updatePipelineStatus(pipelineID, "Failed")
+// 		ps.logExecutionError(pipelineID, stageID, err.Error())
+// 		return err
+// 	}
+
+// 	return ps.updatePipelineStatus(pipelineID, "Completed")
+// }
 
 
 // ✅ Retrieve pipeline status
