@@ -158,3 +158,21 @@ func (h *PipelineHandler) GetUserPipelines(c *gin.Context) {
 
 	c.JSON(http.StatusOK, pipelines)
 }
+
+// GetPipelineStages fetches the stages of a pipeline
+func (h *PipelineHandler) GetPipelineStages(c *gin.Context) {
+	pipelineID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pipeline ID"})
+		return
+	}
+
+	stages, err := h.Service.GetPipelineStages(pipelineID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pipeline stages"})
+		return
+	}
+
+	c.JSON(http.StatusOK, stages)
+}
+

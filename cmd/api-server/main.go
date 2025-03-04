@@ -48,6 +48,8 @@ func main() {
 	r.GET("/user/:id", userHandler.GetUserProfile)  // Fetch user profile
 	r.PUT("/user/:id", userHandler.UpdateUserProfile) // Update user profil
 	r.GET("/pipelines", handler.GetUserPipelines)
+	r.GET("/pipelines/:id/stages", handler.GetPipelineStages) // ✅ New route
+
 
 
 	r.POST("/createpipelines", handler.CreatePipeline)

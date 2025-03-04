@@ -59,3 +59,12 @@ func (d *DatabaseAdapter) GetPipelinesByUser(userID string) ([]models.PipelineEx
 	err := DB.Where("user_id = ?", userID).Find(&pipelines).Error
 	return pipelines, err
 }
+// GetPipelineStages fetches all stages associated with a pipeline
+func (d *DatabaseAdapter) GetPipelineStages(pipelineID uuid.UUID) ([]models.ExecutionLog, error) {
+	var stages []models.ExecutionLog
+	if err := DB.Where("pipeline_id = ?", pipelineID).Find(&stages).Error; err != nil {
+		return nil, err
+	}
+	return stages, nil
+}
+
