@@ -77,9 +77,12 @@ const Dashboard = () => {
   const handlePipelineAction = async (pipelineId, status) => {
     try {
       if (status === "Running") {
-        await axios.post(`http://localhost:8080/pipelines/${pipelineId}/cancel`);
+        await axios.post(`http://localhost:8080/pipelines/${pipelineId}/cancel`, {
+          user_id: user_id,
+          is_parallel: isParallel,
+        });
       } else if (status === "Completed") {
-        alert("Completed pipelines cannot be cancelled.");
+        alert("Completed pipelines cannot be started again.");
         return;
       } else {
         await axios.post(`http://localhost:8080/pipelines/${pipelineId}/start`, {
