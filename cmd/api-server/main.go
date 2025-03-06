@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/rest"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/cmd/middleware"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
 	// "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
 	"github.com/gin-contrib/cors"
@@ -26,6 +27,8 @@ func main() {
 	// password := "harsh123"
 
 	authService := services.NewAuthService(dbRepo)
+	authMiddleware := middleware.AuthMiddleware()
+
 
 	// Initialize REST API handler
 	handler := &rest.PipelineHandler{Service: pipelineService}
@@ -44,18 +47,29 @@ func main() {
 	r.POST("/register", gin.WrapF(authHandler.RegisterHandler))
 	r.POST("/login", gin.WrapF(authHandler.LoginHandler))
 
-	// User profile routes
-	r.GET("/user/:id", userHandler.GetUserProfile)  // Fetch user profile
-	r.PUT("/user/:id", userHandler.UpdateUserProfile) // Update user profil
-	r.GET("/pipelines", handler.GetUserPipelines)
-	r.GET("/pipelines/:id/stages", handler.GetPipelineStages) // ✅ New route
+	// // User profile routes
+	// r.GET("/user/:id", userHandler.GetUserProfile)  // Fetch user profile
+	// r.PUT("/user/:id", userHandler.UpdateUserProfile) // Update user profil
+	// r.GET("/pipelines", handler.GetUserPipelines)
+	// r.GET("/pipelines/:id/stages", handler.GetPipelineStages) // ✅ New route
 
 
 
-	r.POST("/createpipelines", handler.CreatePipeline)
-	r.POST("/pipelines/:id/start", handler.StartPipeline)
-	r.GET("/pipelines/:id/status", handler.GetPipelineStatus)
-	r.POST("/pipelines/:id/cancel", handler.CancelPipeline)
+	// r.POST("/createpipelines", handler.CreatePipeline)
+	// r.POST("/pipelines/:id/start", handler.StartPipeline)
+	// r.GET("/pipelines/:id/status", handler.GetPipelineStatus)
+	// r.POST("/pipelines/:id/cancel", handler.CancelPipeline)
+
+	r.GET("/user/:id", authMiddleware, userHandler.GetUserProfile)
+	r.PUT("/user/:id", authMiddleware, userHandler.UpdateUserProfile)
+
+	r.GET("/pipelines", authMiddleware, handler.GetUserPipelines)
+	r.GET("/pipelines/:id/stages", authMiddleware, handler.GetPipelineStages)
+
+	r.POST("/createpipelines", authMiddleware, handler.CreatePipeline)
+	r.POST("/pipelines/:id/start", authMiddleware, handler.StartPipeline)
+	r.GET("/pipelines/:id/status", authMiddleware, handler.GetPipelineStatus)
+	r.POST("/pipelines/:id/cancel", authMiddleware, handler.CancelPipeline)
 
 	// Start server
 	log.Println("Starting API server on port 8080...")

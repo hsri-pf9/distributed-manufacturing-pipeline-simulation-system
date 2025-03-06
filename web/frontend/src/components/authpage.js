@@ -1,8 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import { TextField, Button, Select, MenuItem, Typography, Container, Box, AppBar, Toolbar } from "@mui/material";
 import axios from "axios";
 import Dashboard from "../dashboard/dashboard";
+
+// ✅ Function to decode JWT token and extract user_id
+const decodeToken = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload;
+  } catch (error) {
+    console.error("Failed to decode token:", error);
+    return null;
+  }
+};
+
+// ✅ Function to check if token is expired
+const isTokenExpired = (token) => {
+  const payload = decodeToken(token);
+  if (!payload || !payload.exp) return true;
+  return Date.now() >= payload.exp * 1000;
+};
+
+// ✅ Check and redirect if token is expired
+const checkSession = (navigate) => {
+  const token = localStorage.getItem("token");
+  if (!token || isTokenExpired(token)) {
+    console.warn("Token expired. Logging out...");
+    localStorage.clear();
+    navigate("/login");
+  }
+};
 
 
 const AuthLayout = ({ children, title }) => {
@@ -55,30 +83,45 @@ const LoginPage = ({ apiType }) => {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    checkSession(navigate);  // ✅ Auto logout if token expired
+  }, []);
+
   const handleLogin = async () => {
     setMessage("");
     if (apiType === "rest") {
       try {
-        const response = await axios.post(
-          "http://localhost:8080/login",
-          { email, password },
-          {
-            headers: { "Content-Type": "application/json" },
-            withCredentials: true, // ✅ Ensure cross-origin cookies are included
-          }
-        );
+        // const response = await axios.post(
+        //   "http://localhost:8080/login",
+        //   { email, password },
+        //   {
+        //     headers: { "Content-Type": "application/json" },
+        //     withCredentials: true, // ✅ Ensure cross-origin cookies are included
+        //   }
+        // );
+        const response = await axios.post("http://localhost:8080/login", { email, password });
   
-        // ✅ Extract user_id, email, and token correctly
-        const { user_id, token } = response.data;
-        console.log("Full Response from Backend:", response.data);
-        if (!user_id || !email || !token) throw new Error("Invalid response from backend");
+        // // ✅ Extract user_id, email, and token correctly
+        // const { user_id, token } = response.data;
+        // console.log("Full Response from Backend:", response.data);
+        // if (!user_id || !email || !token) throw new Error("Invalid response from backend");
   
-        console.log("User ID:", user_id);
+        // console.log("User ID:", user_id);
   
-        // ✅ Store user_id and token for session persistence
-        localStorage.setItem("user_id", user_id);
-        localStorage.setItem("email", email);
+        // // ✅ Store user_id and token for session persistence
+        // localStorage.setItem("user_id", user_id);
+        // localStorage.setItem("email", email);
+        // localStorage.setItem("token", token);
+
+        const { token } = response.data;
+        if (!token) throw new Error("Token not received");
+
+        // ✅ Store token in localStorage
         localStorage.setItem("token", token);
+
+        // ✅ Decode token to extract user ID (JWT tokens are usually Base64 encoded)
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        localStorage.setItem("user_id", payload.sub);
   
         navigate("/dashboard");
       } catch (error) {

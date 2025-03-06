@@ -8,6 +8,31 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+
+// ✅ Function to check token validity
+const isTokenExpired = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
+// ✅ Function to get user ID from the token
+const getUserIdFromToken = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])); // Decode JWT
+    return payload.sub; // Assuming 'sub' contains user_id
+  } catch {
+    return null;
+  }
+};
+
 const Dashboard = () => {
   const [user, setUser] = useState({ name: "", role: "", email: "" });
   const [pipelines, setPipelines] = useState([]);
@@ -21,22 +46,61 @@ const Dashboard = () => {
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
   const [openStageModal, setOpenStageModal] = useState(false);
 
-  // Retrieve user_id from localStorage
-  const user_id = localStorage.getItem("user_id");
+  // // Retrieve user_id from localStorage
+  // const user_id = localStorage.getItem("user_id");
 
+  // useEffect(() => {
+  //   if (!user_id) {
+  //     console.error("User ID not found! Redirecting to login.");
+  //     navigate("/login");
+  //     return;
+  //   }
+  //   fetchUserProfile();
+  //   fetchUserPipelines();
+  // }, [user_id]);
+
+  // ✅ Get user ID from token
+  const user_id = getUserIdFromToken();
+  
+  // ✅ Auto logout if token is expired
   useEffect(() => {
-    if (!user_id) {
-      console.error("User ID not found! Redirecting to login.");
+    if (isTokenExpired()) {
+      console.warn("Token expired. Logging out...");
+      localStorage.clear();
       navigate("/login");
       return;
     }
     fetchUserProfile();
     fetchUserPipelines();
-  }, [user_id]);
+  }, []);
+
+  // ✅ Attach token to every API request
+  const authAxios = axios.create({
+    baseURL: "http://localhost:8080",
+    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  });
+
+  const logoutUser = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  // const fetchUserProfile = async () => {
+  //   try {
+  //     const response = await axios.get(`http://localhost:8080/user/${user_id}`);
+  //     if (response.data) {
+  //       setUser(response.data);
+  //       localStorage.setItem("user_name", response.data.name);
+  //       localStorage.setItem("user_role", response.data.role);
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch user profile", error);
+  //   }
+  // };
 
   const fetchUserProfile = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/user/${user_id}`);
+      const response = await authAxios.get(`/user/${localStorage.getItem("user_id")}`);
       if (response.data) {
         setUser(response.data);
         localStorage.setItem("user_name", response.data.name);
@@ -44,12 +108,13 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Failed to fetch user profile", error);
+      logoutUser();
     }
   };
 
   const fetchUserPipelines = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/pipelines?user_id=${user_id}`);
+      const response = await authAxios.get(`/pipelines?user_id=${user_id}`);
       console.log("Fetched Pipelines:", response.data);
       if (Array.isArray(response.data)) {
         setPipelines(response.data);
@@ -63,7 +128,7 @@ const Dashboard = () => {
 
   const handleCreatePipeline = async () => {
     try {
-      await axios.post("http://localhost:8080/createpipelines", {
+      await authAxios.post("/createpipelines", {
         stages: pipelineStages,
         is_parallel: isParallel,
         user_id: user_id,
@@ -77,7 +142,7 @@ const Dashboard = () => {
   const handlePipelineAction = async (pipelineId, status) => {
     try {
       if (status === "Running") {
-        await axios.post(`http://localhost:8080/pipelines/${pipelineId}/cancel`, {
+        await authAxios.post(`/pipelines/${pipelineId}/cancel`, {
           user_id: user_id,
           is_parallel: isParallel,
         });
@@ -85,7 +150,7 @@ const Dashboard = () => {
         alert("Completed pipelines cannot be started again.");
         return;
       } else {
-        await axios.post(`http://localhost:8080/pipelines/${pipelineId}/start`, {
+        await authAxios.post(`/pipelines/${pipelineId}/start`, {
           user_id: user_id,
           input: { raw_material: "Steel", quantity: 100 },
           is_parallel: isParallel,
@@ -101,6 +166,7 @@ const Dashboard = () => {
       setTimeout(fetchUserPipelines, 1000); // ✅ Refresh status after 1 sec
     } catch (error) {
       console.error("Failed to update pipeline status", error);
+      // logoutUser();
     }
   };
 
@@ -108,7 +174,7 @@ const Dashboard = () => {
     try {
       console.log(`Fetching stages for pipeline: ${pipelineId}`); // ✅ Debugging log
   
-      const response = await axios.get(`http://localhost:8080/pipelines/${pipelineId}/stages`);
+      const response = await authAxios.get(`/pipelines/${pipelineId}/stages`);
       
       console.log("Stages Data:", response.data); // ✅ Check API response
   
@@ -120,12 +186,13 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Failed to fetch pipeline stages:", error);
+      logoutUser();
     }
   };
 
   const handleProfileSave = async () => {
     try {
-      await axios.put(`http://localhost:8080/user/${user_id}`, {
+      await authAxios.put(`/user/${user_id}`, {
         name: user.name,
         role: user.role,
       });
