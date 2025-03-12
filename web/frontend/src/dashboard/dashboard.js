@@ -206,14 +206,23 @@ const Dashboard = () => {
   return (
     <Container maxWidth="md">
       <AppBar position="static">
-        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-          <Typography variant="h6">Dashboard</Typography>
+      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+        <Typography variant="h6">Dashboard</Typography>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {/* Profile Menu */}
           <Button color="inherit" onClick={(e) => setAnchorEl(e.currentTarget)}>Profile</Button>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem onClick={() => setProfileOpen(true)}>Edit Profile</MenuItem>
           </Menu>
-        </Toolbar>
-      </AppBar>
+
+          {/* 🚀 Logout Button */}
+          <Button color="secondary" variant="contained" onClick={logoutUser}>
+            Logout
+          </Button>
+        </Box>
+      </Toolbar>
+    </AppBar>
       <Box sx={{ textAlign: "center", mt: 5, p: 4, boxShadow: 3, borderRadius: 2 }}>
         <Typography variant="h4">Welcome, {user.name || "User"}</Typography>
       </Box>

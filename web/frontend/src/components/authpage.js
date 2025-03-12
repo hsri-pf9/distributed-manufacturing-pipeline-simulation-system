@@ -52,7 +52,7 @@ const RegisterPage = ({ apiType }) => {
 
   const handleRegister = async () => {
     setMessage("");
-    if (apiType === "rest") {
+    // if (apiType === "rest") {
       try {
         await axios.post("http://localhost:8080/register", { email, password });
         setMessage("Registration successful! Please check your email to verify.");
@@ -60,10 +60,10 @@ const RegisterPage = ({ apiType }) => {
       } catch {
         setMessage("Registration failed. Please try again.");
       }
-    } else {
-      console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Register`);
-      setMessage("Open your email and click the link to authenticate.");
-    }
+    // } else {
+    //   console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Register`);
+    //   setMessage("Open your email and click the link to authenticate.");
+    // }
   };
 
   return (
@@ -89,7 +89,7 @@ const LoginPage = ({ apiType }) => {
 
   const handleLogin = async () => {
     setMessage("");
-    if (apiType === "rest") {
+    // if (apiType === "rest") {
       try {
         // const response = await axios.post(
         //   "http://localhost:8080/login",
@@ -128,10 +128,10 @@ const LoginPage = ({ apiType }) => {
         console.error("Login failed:", error);
         setMessage("Login failed. Please check your credentials.");
       }
-    } else {
-      console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Login`);
-      setMessage("Check console for gRPC login command.");
-    }
+    // } else {
+    //   console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Login`);
+    //   setMessage("Check console for gRPC login command.");
+    // }
   };
   
 
@@ -147,24 +147,30 @@ const LoginPage = ({ apiType }) => {
 };
 
 const App = () => {
-  const [apiType, setApiType] = useState("rest");
+  // const [apiType, setApiType] = useState("rest");
 
   return (
     <Router>
       <AppBar position="static">
         <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
           <Typography variant="h6">Distributed Manufacturing System</Typography>
-          <Select value={apiType} onChange={(e) => setApiType(e.target.value)} sx={{ color: "white", backgroundColor: "gray" }}>
+          {/* <Select value={apiType} onChange={(e) => setApiType(e.target.value)} sx={{ color: "white", backgroundColor: "gray" }}>
             <MenuItem value="rest">REST API</MenuItem>
             <MenuItem value="grpc">gRPC</MenuItem>
-          </Select>
+          </Select> */}
         </Toolbar>
       </AppBar>
-      <Routes>
+      {/* <Routes>
         <Route path="/register" element={<RegisterPage apiType={apiType} />} />
         <Route path="/login" element={<LoginPage apiType={apiType} />} />
         <Route path="/dashboard/*" element={<Dashboard />} />
         <Route path="/" element={<RegisterPage apiType={apiType} />} />
+      </Routes> */}
+      <Routes>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/" element={<RegisterPage />} />
       </Routes>
     </Router>
   );

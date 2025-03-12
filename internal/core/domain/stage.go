@@ -3,8 +3,10 @@ package domain
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"log"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Stage interface {
@@ -35,6 +37,8 @@ func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}
 		log.Printf("Stage %s execution failed: %v", s.ID, err)
 		return nil, err
 	}
+
+	time.Sleep(5 * time.Second)
 
 	log.Printf("Stage %s executed successfully", s.ID)
 	return input, nil
