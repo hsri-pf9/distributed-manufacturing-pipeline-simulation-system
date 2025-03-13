@@ -212,7 +212,13 @@ const Dashboard = () => {
       console.log("Stages Data:", response.data); // ✅ Check API response
   
       if (Array.isArray(response.data)) {
-        setSelectedPipelineStages(response.data);
+         // 🔹 Initialize all stages as "Pending" first
+        const initializedStages = response.data.map(stage => ({
+          StageID: stage.StageID,
+          Status: "Pending", // Assume "Pending" initially
+        }));
+
+        setSelectedPipelineStages(initializedStages);
         setSelectedPipelineId(pipelineId);
         setOpenStageModal(true); // ✅ Ensure modal opens
         setupSSE(pipelineId);
@@ -276,14 +282,28 @@ const Dashboard = () => {
             pipeline.PipelineID === eventData.pipeline_id ? { ...pipeline, Status: eventData.status } : pipeline
           )
         );
-      } else if (eventData.type === "stage") {
-        setSelectedPipelineStages((prevStages) => {
-          const updatedStages = prevStages.map((stage) =>
-            stage.StageID === eventData.stage_id ? { ...stage, Status: eventData.status } : stage
-          );
-          return updatedStages.length ? updatedStages : [...prevStages, eventData];
-        });
       }
+      if (eventData.type === "stage") {
+        setSelectedPipelineStages((prevStages) => {
+            const existingStageIndex = prevStages.findIndex(stage => stage.StageID === eventData.stage_id);
+
+            if (existingStageIndex !== -1) {
+                // ✅ Update stage status (Pending → Running → Completed)
+                return prevStages.map(stage =>
+                    stage.StageID === eventData.stage_id ? { ...stage, Status: eventData.status } : stage
+                );
+            } else {
+                // ✅ If this is the first stage and no stages exist, add it immediately
+                if (prevStages.length === 0) {
+                    console.log("🚀 First stage detected! Adding immediately as Running.");
+                    return [{ StageID: eventData.stage_id, Status: eventData.status }];
+                }
+
+                // ✅ Add new stage dynamically
+                return [...prevStages, { StageID: eventData.stage_id, Status: eventData.status }];
+            }
+        });
+    }
     };
 
     eventSource.onerror = (error) => {
