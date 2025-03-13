@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/utils"
 )
 
 type PipelineHandler struct {
 	Service *services.PipelineService
+	SSE     *utils.SSEManager // 🔹 Added SSE Manager
 }
 
 type CreatePipelineRequest struct {
@@ -38,6 +40,8 @@ func (h *PipelineHandler) CreatePipeline(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pipeline"})
 		return
 	}
+
+	h.SSE.BroadcastUpdate("Pipeline " + pipelineID.String() + " has been created.")
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Pipeline created", "pipeline_id": pipelineID})
 }
@@ -69,6 +73,9 @@ func (h *PipelineHandler) StartPipeline(c *gin.Context) {
 
 	go func() {
 		h.Service.StartPipeline(context.Background(), req.UserID, pipelineID, req.Input, req.IsParallel)
+
+		// 🔹 Notify clients about execution start
+		h.SSE.BroadcastUpdate("Pipeline " + pipelineID.String() + " has started execution.")
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Pipeline execution started", "pipeline_id": pipelineID})
@@ -139,6 +146,9 @@ func (h *PipelineHandler) CancelPipeline(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel pipeline"})
 		return
 	}
+
+	// 🔹 Notify clients about pipeline cancellation
+	h.SSE.BroadcastUpdate("Pipeline " + pipelineID.String() + " has been cancelled.")
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pipeline cancelled", "pipeline_id": pipelineID})
 }

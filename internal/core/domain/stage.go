@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/utils"
 )
 
 type Stage interface {
 	GetID() uuid.UUID
-	Execute(ctx context.Context, input interface{}) (interface{}, error)
+	// Execute(ctx context.Context, input interface{}) (interface{}, error)
+	Execute(ctx context.Context, input interface{}, sse *utils.SSEManager, pipelineID uuid.UUID) (interface{}, error)
 	HandleError(ctx context.Context, err error) error
 	Rollback(ctx context.Context, input interface{}) error
 }
@@ -28,19 +30,60 @@ func (s *BaseStage) GetID() uuid.UUID {
 	return s.ID
 }
 
-func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}, error) {
+// func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}, error) {
+// 	log.Printf("Executing stage: %s with input: %v\n", s.ID, input)
+
+// 	// Simulate execution failure for testing error handling
+// 	if input == nil {
+// 		err := errors.New("input is nil, stage execution failed")
+// 		log.Printf("Stage %s execution failed: %v", s.ID, err)
+// 		return nil, err
+// 	}
+
+// 	time.Sleep(5 * time.Second)
+
+// 	log.Printf("Stage %s executed successfully", s.ID)
+// 	return input, nil
+// }
+
+func (s *BaseStage) Execute(ctx context.Context, input interface{}, sse *utils.SSEManager, pipelineID uuid.UUID) (interface{}, error) {
 	log.Printf("Executing stage: %s with input: %v\n", s.ID, input)
 
-	// Simulate execution failure for testing error handling
+	// ✅ Broadcast stage execution start as JSON
+	sse.BroadcastUpdate(map[string]interface{}{
+		"type":        "stage",
+		"stage_id":    s.ID.String(),
+		"pipeline_id": pipelineID.String(),
+		"status":      "Running",
+	})
+
 	if input == nil {
 		err := errors.New("input is nil, stage execution failed")
 		log.Printf("Stage %s execution failed: %v", s.ID, err)
+
+		// ✅ Broadcast stage failure as JSON
+		sse.BroadcastUpdate(map[string]interface{}{
+			"type":        "stage",
+			"stage_id":    s.ID.String(),
+			"pipeline_id": pipelineID.String(),
+			"status":      "Failed",
+		})
+
 		return nil, err
 	}
 
 	time.Sleep(5 * time.Second)
 
 	log.Printf("Stage %s executed successfully", s.ID)
+
+	// ✅ Broadcast stage completion as JSON
+	sse.BroadcastUpdate(map[string]interface{}{
+		"type":        "stage",
+		"stage_id":    s.ID.String(),
+		"pipeline_id": pipelineID.String(),
+		"status":      "Completed",
+	})
+
 	return input, nil
 }
 

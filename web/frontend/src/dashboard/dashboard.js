@@ -45,6 +45,7 @@ const Dashboard = () => {
   const [selectedPipelineStages, setSelectedPipelineStages] = useState([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
   const [openStageModal, setOpenStageModal] = useState(false);
+  const [sseEventSource, setSseEventSource] = useState(null);
 
   // // Retrieve user_id from localStorage
   // const user_id = localStorage.getItem("user_id");
@@ -74,11 +75,42 @@ const Dashboard = () => {
     fetchUserPipelines();
   }, []);
 
-  // ✅ Attach token to every API request
+  // // ✅ Attach token to every API request
+  // const authAxios = axios.create({
+  //   baseURL: "http://localhost:8080",
+  //   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  // });
+
+  // ✅ Axios instance with dynamic token attachment
   const authAxios = axios.create({
     baseURL: "http://localhost:8080",
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
   });
+
+  authAxios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn("⚠️ No token found, request may fail.");
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // ✅ Handle Unauthorized (401) Responses
+  authAxios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 401) {
+        console.warn("🔴 Token expired or invalid, logging out...");
+        localStorage.clear();
+        navigate("/login");
+      }
+      return Promise.reject(error);
+    }
+  );
 
   const logoutUser = () => {
     localStorage.clear();
@@ -100,7 +132,8 @@ const Dashboard = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await authAxios.get(`/user/${localStorage.getItem("user_id")}`);
+      // const response = await authAxios.get(`/user/${localStorage.getItem("user_id")}`);
+      const response = await authAxios.get(`/user/${user_id}`);
       if (response.data) {
         setUser(response.data);
         localStorage.setItem("user_name", response.data.name);
@@ -180,7 +213,9 @@ const Dashboard = () => {
   
       if (Array.isArray(response.data)) {
         setSelectedPipelineStages(response.data);
+        setSelectedPipelineId(pipelineId);
         setOpenStageModal(true); // ✅ Ensure modal opens
+        setupSSE(pipelineId);
       } else {
         console.error("Unexpected response format:", response.data);
       }
@@ -202,6 +237,72 @@ const Dashboard = () => {
     }
   };
   
+  // ✅ SSE with Token in Query Params (Recommended)
+  const setupSSE = (pipelineId) => {
+    if (sseEventSource) {
+      sseEventSource.close();
+    }
+
+    const token = localStorage.getItem("token");
+    const eventSource = new EventSource(`http://localhost:8080/pipelines/${pipelineId}/stream?token=${token}`);
+
+    eventSource.onmessage = (event) => {
+      const eventData = JSON.parse(event.data);
+      console.log("🔄 SSE Event Received:", eventData);
+
+      if (!eventData.status) {
+        console.warn("⚠️ Invalid SSE Event:", eventData);
+        return;
+      }
+
+      // if (eventData.type === "pipeline") {
+      //   setPipelines((prevPipelines) =>
+      //     prevPipelines.map((pipeline) =>
+      //       pipeline.PipelineID === eventData.pipeline_id ? { ...pipeline, Status: eventData.status } : pipeline
+      //     )
+      //   );
+      // }
+
+      // if (eventData.type === "stage" && selectedPipelineId === eventData.pipeline_id) {
+      //   setSelectedPipelineStages((prevStages) =>
+      //     prevStages.map((stage) =>
+      //       stage.StageID === eventData.stage_id ? { ...stage, Status: eventData.status } : stage
+      //     )
+      //   );
+      // }
+      if (eventData.type === "pipeline") {
+        setPipelines((prevPipelines) =>
+          prevPipelines.map((pipeline) =>
+            pipeline.PipelineID === eventData.pipeline_id ? { ...pipeline, Status: eventData.status } : pipeline
+          )
+        );
+      } else if (eventData.type === "stage") {
+        setSelectedPipelineStages((prevStages) => {
+          const updatedStages = prevStages.map((stage) =>
+            stage.StageID === eventData.stage_id ? { ...stage, Status: eventData.status } : stage
+          );
+          return updatedStages.length ? updatedStages : [...prevStages, eventData];
+        });
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("❌ SSE Connection Error:", error);
+      eventSource.close();
+    };
+
+    setSseEventSource(eventSource);
+  };
+
+  // ✅ Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      if (sseEventSource) {
+        console.log("❌ Closing SSE connection...");
+        sseEventSource.close();
+      }
+    };
+  }, []);
 
   return (
     <Container maxWidth="md">
@@ -267,8 +368,8 @@ const Dashboard = () => {
                     >
                       Show Stages
                     </Button>
-                    
                     )}
+                    {/* <Button variant="outlined" onClick={() => setOpenStageModal(true)}>Show Stages</Button> */}
                   </TableCell>
                 </TableRow>
               ))}
@@ -293,7 +394,11 @@ const Dashboard = () => {
           {selectedPipelineStages.map((stage) => (
             <TableRow key={stage.StageID}>
               <TableCell>{stage.StageID}</TableCell>
-              <TableCell>{stage.Status}</TableCell>
+              <TableCell>
+                      <Typography sx={{ fontWeight: "bold", color: stage.Status === "Running" ? "blue" : stage.Status === "Completed" ? "green" : "gray" }}>
+                        {stage.Status}
+                      </Typography>
+                    </TableCell>
             </TableRow>
           ))}
         </TableBody>

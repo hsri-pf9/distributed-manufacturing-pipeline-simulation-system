@@ -92,6 +92,7 @@ import (
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/primary"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/utils"
 
 	"github.com/gin-contrib/cors"
 	proto "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto/auth"
@@ -100,13 +101,14 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func startRESTServer(authService *services.AuthService, pipelineService *services.PipelineService, wg *sync.WaitGroup) {
+func startRESTServer(authService *services.AuthService, pipelineService *services.PipelineService, sseManager *utils.SSEManager, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	authMiddleware := middleware.AuthMiddleware()
 
 	// Initialize REST API handlers
-	handler := &rest.PipelineHandler{Service: pipelineService}
+	// handler := &rest.PipelineHandler{Service: pipelineService}
+	handler := &rest.PipelineHandler{Service: pipelineService, SSE: sseManager}
 	authHandler := &rest.AuthHandler{Service: authService}
 	userHandler := &rest.UserHandler{Service: authService}
 
@@ -134,6 +136,9 @@ func startRESTServer(authService *services.AuthService, pipelineService *service
 	r.POST("/pipelines/:id/start", authMiddleware, handler.StartPipeline)
 	r.GET("/pipelines/:id/status", authMiddleware, handler.GetPipelineStatus)
 	r.POST("/pipelines/:id/cancel", authMiddleware, handler.CancelPipeline)
+
+	// SSE Route
+	r.GET("/pipelines/:id/stream", authMiddleware, sseManager.RegisterClient)
 
 	// Start REST API server
 	log.Println("Starting REST API & Frontend on port 8080...")
@@ -185,20 +190,24 @@ func main() {
 	secondary.InitDatabase()
 	dbRepo := secondary.NewDatabaseAdapter()
 
+	sseManager := utils.NewSSEManager()
+
 	// Initialize services
 	authService := services.NewAuthService(dbRepo)
-	pipelineService := services.NewPipelineService(dbRepo)
+	pipelineService := services.NewPipelineService(dbRepo,sseManager)
+	
+
 
 	var wg sync.WaitGroup
 	wg.Add(3)
 
 	// Start REST API server
-	go startRESTServer(authService, pipelineService, &wg)
+	go startRESTServer(authService, pipelineService, sseManager, &wg)
 
 	// Start gRPC server
 	go startGRPCServer(authService, pipelineService, &wg)
 
-	go startFrontendServer(&wg) 
+	// go startFrontendServer(&wg) 
 
 	// Wait for both servers to run
 	wg.Wait()

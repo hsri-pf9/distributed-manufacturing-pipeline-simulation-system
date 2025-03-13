@@ -11,6 +11,7 @@ import (
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/domain"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/ports"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/models"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/utils" // ✅ Import SSEManager
 )
 
 type PipelineService struct {
@@ -18,15 +19,55 @@ type PipelineService struct {
 	ParallelOrchestrators   map[uuid.UUID]*domain.ParallelPipelineOrchestrator
 	Repository             ports.PipelineRepository
 	mu                     sync.RWMutex
+	SSE                    *utils.SSEManager // ✅ Add SSEManager
 }
 
-func NewPipelineService(repo ports.PipelineRepository) *PipelineService {
+// func NewPipelineService(repo ports.PipelineRepository) *PipelineService {
+func NewPipelineService(repo ports.PipelineRepository, sse *utils.SSEManager) *PipelineService {
 	return &PipelineService{
 		SequentialOrchestrators: make(map[uuid.UUID]*domain.SequentialPipelineOrchestrator),
 		ParallelOrchestrators:   make(map[uuid.UUID]*domain.ParallelPipelineOrchestrator),
 		Repository:             repo,
+		SSE:                    sse,
 	}
 }
+
+// func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isParallel bool) (uuid.UUID, error) {
+// 	pipelineID := uuid.New()
+
+// 	ps.mu.Lock()
+// 	var orchestrator domain.PipelineOrchestrator
+// 	if isParallel {
+// 		orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
+// 		ps.ParallelOrchestrators[pipelineID] = orchestrator.(*domain.ParallelPipelineOrchestrator)
+// 	} else {
+// 		orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
+// 		ps.SequentialOrchestrators[pipelineID] = orchestrator.(*domain.SequentialPipelineOrchestrator)
+// 	}
+// 	ps.mu.Unlock()
+
+	
+// 	for i := 0; i < stageCount; i++ {
+// 		stage := domain.NewBaseStage()
+// 		log.Printf("Adding Stage: %s to Pipeline: %s", stage.GetID(), pipelineID) // Debugging log
+// 		if err := orchestrator.AddStage(stage); err != nil {
+// 			return uuid.Nil, err
+// 		}
+// 	}
+
+// 	err := ps.Repository.SavePipelineExecution(&models.PipelineExecution{
+// 		PipelineID: pipelineID,
+// 		UserID:     userID,
+// 		Status:     "Created",
+// 		CreatedAt:  time.Now(),
+// 		UpdatedAt:  time.Now(),
+// 	})
+// 	if err != nil {
+// 		return uuid.Nil, err
+// 	}
+
+// 	return pipelineID, nil
+// }
 
 func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isParallel bool) (uuid.UUID, error) {
 	pipelineID := uuid.New()
@@ -34,22 +75,28 @@ func (ps *PipelineService) CreatePipeline(userID uuid.UUID, stageCount int, isPa
 	ps.mu.Lock()
 	var orchestrator domain.PipelineOrchestrator
 	if isParallel {
-		orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository)
+		orchestrator = domain.NewParallelPipelineOrchestrator(pipelineID, ps.Repository, ps.SSE)
 		ps.ParallelOrchestrators[pipelineID] = orchestrator.(*domain.ParallelPipelineOrchestrator)
 	} else {
-		orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository)
+		orchestrator = domain.NewSequentialPipelineOrchestrator(pipelineID, ps.Repository, ps.SSE)
 		ps.SequentialOrchestrators[pipelineID] = orchestrator.(*domain.SequentialPipelineOrchestrator)
 	}
 	ps.mu.Unlock()
 
-	
 	for i := 0; i < stageCount; i++ {
 		stage := domain.NewBaseStage()
-		log.Printf("Adding Stage: %s to Pipeline: %s", stage.GetID(), pipelineID) // Debugging log
 		if err := orchestrator.AddStage(stage); err != nil {
 			return uuid.Nil, err
 		}
 	}
+
+	// 🔹 Broadcast pipeline creation via SSE
+	ps.SSE.BroadcastUpdate(map[string]interface{}{
+		"type":        "pipeline",
+		"pipeline_id": pipelineID.String(),
+		"status":      "Created",
+	})
+
 
 	err := ps.Repository.SavePipelineExecution(&models.PipelineExecution{
 		PipelineID: pipelineID,
@@ -102,6 +149,13 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 		return errors.New("unknown orchestrator type")
 	}
 
+	// 🔹 Broadcast pipeline start via SSE
+	ps.SSE.BroadcastUpdate(map[string]interface{}{
+		"type":        "pipeline",
+		"pipeline_id": pipelineID.String(),
+		"status":      "Running",
+	})
+
 	if err := ps.updatePipelineStatus(pipelineID, "Running"); err != nil {
 		return err
 	}
@@ -110,8 +164,22 @@ func (ps *PipelineService) StartPipeline(ctx context.Context, userID uuid.UUID, 
 	if err != nil {
 		_ = ps.updatePipelineStatus(pipelineID, "Failed")
 		ps.logExecutionError(pipelineID, stageID, err.Error())
+
+		// 🔹 Broadcast pipeline failure via SSE
+		ps.SSE.BroadcastUpdate(map[string]interface{}{
+			"type":        "pipeline",
+			"pipeline_id": pipelineID.String(),
+			"status":      "Failed",
+		})
 		return err
 	}
+
+	// 🔹 Broadcast pipeline completion via SSE
+	ps.SSE.BroadcastUpdate(map[string]interface{}{
+		"type":        "pipeline",
+		"pipeline_id": pipelineID.String(),
+		"status":      "Completed",
+	})
 
 	return ps.updatePipelineStatus(pipelineID, "Completed")
 }
@@ -220,6 +288,13 @@ func (ps *PipelineService) CancelPipeline(pipelineID uuid.UUID, userID uuid.UUID
 		_ = ps.updatePipelineStatus(pipelineID, "Failed to Cancel")
 		return err
 	}
+
+	// 🔹 Broadcast pipeline cancellation via SSE
+	ps.SSE.BroadcastUpdate(map[string]interface{}{
+		"type":        "pipeline",
+		"pipeline_id": pipelineID.String(),
+		"status":      "Cancelled",
+	})
 
 	return ps.updatePipelineStatus(pipelineID, "Cancelled")
 }
