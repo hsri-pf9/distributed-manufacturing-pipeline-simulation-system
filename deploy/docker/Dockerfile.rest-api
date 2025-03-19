@@ -1,0 +1,36 @@
+# Use latest Go version (1.24) for building the binary
+FROM golang:1.24 as builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# # Build the Go binary
+# RUN go build -o rest-api ./cmd/api-server/main.go
+
+# Build the Go binary as a static executable
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rest-api ./cmd/api-server/main.go
+
+# Use a minimal base image for final container
+FROM alpine:latest
+
+# Set working directory in the container
+WORKDIR /root/
+
+# Copy the built binary from builder stage
+COPY --from=builder /app/rest-api .
+
+# Ensure the binary has execution permissions
+RUN chmod +x rest-api
+
+# Expose the REST API port (8080)
+EXPOSE 8080
+
+# Start the application
+CMD ["./rest-api"]

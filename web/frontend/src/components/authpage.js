@@ -54,7 +54,8 @@ const RegisterPage = ({ apiType }) => {
     setMessage("");
     // if (apiType === "rest") {
       try {
-        await axios.post("http://localhost:8080/register", { email, password });
+        // await axios.post("http://localhost:8080/register", { email, password });
+        await axios.post("http://localhost:30081/register", { email, password });
         setMessage("Registration successful! Please check your email to verify.");
         window.open("https://mail.google.com", "_blank");
       } catch {
@@ -99,7 +100,8 @@ const LoginPage = ({ apiType }) => {
         //     withCredentials: true, // ✅ Ensure cross-origin cookies are included
         //   }
         // );
-        const response = await axios.post("http://localhost:8080/login", { email, password });
+        // const response = await axios.post("http://localhost:8080/login", { email, password });
+        const response = await axios.post("http://localhost:30081/login", { email, password });
   
         // // ✅ Extract user_id, email, and token correctly
         // const { user_id, token } = response.data;

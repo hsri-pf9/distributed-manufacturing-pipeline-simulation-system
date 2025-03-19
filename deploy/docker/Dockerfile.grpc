@@ -1,0 +1,39 @@
+# Use Go 1.24 for building the gRPC server
+FROM golang:1.24 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# # Build the gRPC server binary
+# RUN go build -o grpc-server ./cmd/grpc-server/grpc_main.go
+
+# Build the gRPC server binary as a fully static binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o grpc-server -tags netgo -ldflags "-extldflags=-static" ./cmd/grpc-server/grpc_main.go
+
+# Use a minimal base image for final container
+FROM alpine:latest
+
+# Install required certificates (important for gRPC TLS connections)
+RUN apk add --no-cache ca-certificates
+
+# Set working directory in the container
+WORKDIR /root/
+
+# Copy the built binary from builder stage
+COPY --from=builder /app/grpc-server .
+
+# Ensure the binary has execution permissions
+RUN chmod +x grpc-server
+
+# Expose gRPC server port (50051)
+EXPOSE 50051
+
+# Start the gRPC server
+CMD ["./grpc-server"]

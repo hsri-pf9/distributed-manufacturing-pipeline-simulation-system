@@ -42,9 +42,19 @@ func (s *SSEManager) RegisterClient(c *gin.Context) {
 	// Create a done channel to detect client disconnect
 	done := make(chan struct{})
 
-	// Run a goroutine to detect client disconnection
+	// // Run a goroutine to detect client disconnection
+	// go func() {
+	// 	<-c.Request.Context().Done()
+	// 	close(done) // Notify main function to remove the client
+	// }()
+	// ✅ Detect client disconnect
 	go func() {
-		<-c.Request.Context().Done()
+		select {
+		case <-c.Request.Context().Done(): // If request context is canceled
+			log.Println("[SSE] Client closed connection (context done)")
+		case <-c.Writer.CloseNotify(): // If client closes the connection abruptly
+			log.Println("[SSE] Client closed connection (CloseNotify)")
+		}
 		close(done) // Notify main function to remove the client
 	}()
 

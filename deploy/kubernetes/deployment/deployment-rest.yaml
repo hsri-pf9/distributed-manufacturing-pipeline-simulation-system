@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rest-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rest-api
+  template:
+    metadata:
+      labels:
+        app: rest-api
+    spec:
+      containers:
+        - name: rest-api
+          image: hsri/rest-api:v1.0.0 #TODO
+          ports:
+            - containerPort: 8080  # ✅ Ensure this is within 1-65535
+          env:
+            - name: SUPABASE_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: supabase-config
+                  key: SUPABASE_DB
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: supabase-secrets
+                  key: SUPABASE_URL
+            - name: SUPABASE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: supabase-secrets
+                  key: SUPABASE_API_KEY
+          resources:  # ✅ Added resource requests and limits
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest-api-service
+spec:
+  selector:
+    app: rest-api
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080  # ✅ Ensure it matches `containerPort`
+      nodePort: 30081
+  type: NodePort  # ✅ Exposing the REST API externally

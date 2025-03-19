@@ -1,0 +1,62 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: democtl
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: democtl
+#   template:
+#     metadata:
+#       labels:
+#         app: democtl
+#     spec:
+#       containers:
+#         - name: democtl
+#           image: hsri/democtl:v1.0.0
+#           env:
+#             - name: DEMOCTL_GRPC_URL
+#               value: "grpc-backend:50051"
+#           stdin: true
+#           tty: true  # Allows interactive terminal access
+#           resources:
+#             requests:
+#               memory: "128Mi"
+#               cpu: "100m"
+#             limits:
+#               memory: "256Mi"
+#               cpu: "200m"
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: democtl-service
+# spec:
+#   type: LoadBalancer  # Expose `democtl` externally
+#   ports:
+#     - port: 80
+#       targetPort: 50051
+#   selector:
+#     app: democtl
+
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: democtl-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: democtl
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: democtl
+          image: hsri/democtl:v1.0.0
+          env:
+            - name: DEMOCTL_GRPC_URL
+              value: "grpc-server-service:50051"
+          stdin: true
+          tty: true  # Allows interactive execution
