@@ -1,14 +1,14 @@
-package main
+package cmd
 
 import (
-	"context"
+	// "context"
 	"fmt"
 	"log"
-	"time"
+	// "time"
 
 	proto "github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/grpc/proto/pipeline"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
+	// "google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -28,15 +28,14 @@ var createPipelineCmd = &cobra.Command{
 		stages, _ := cmd.Flags().GetInt("stages")
 		isParallel, _ := cmd.Flags().GetBool("parallel")
 
-		conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("Failed to connect to gRPC server: %v", err)
-		}
+		// 🔹 Get gRPC connection
+		conn, ctx, cancel := GetGRPCConnection()
 		defer conn.Close()
+		defer cancel()
 
 		client := proto.NewPipelineServiceClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		// defer cancel()
 
 		resp, err := client.CreatePipeline(ctx, &proto.CreatePipelineRequest{
 			UserId:    userID,
@@ -61,15 +60,14 @@ var startPipelineCmd = &cobra.Command{
 		inputValue, _ := cmd.Flags().GetString("input") // ✅ Get input from CLI
 		isParallel, _ := cmd.Flags().GetBool("parallel")
 
-		conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("Failed to connect to gRPC server: %v", err)
-		}
+		// 🔹 Get gRPC connection
+		conn, ctx, cancel := GetGRPCConnection()
 		defer conn.Close()
+		defer cancel()
 
 		client := proto.NewPipelineServiceClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		// defer cancel()
 
 		// ✅ Convert input string to Google Protobuf `StringValue`
 		stringValue := &wrapperspb.StringValue{Value: inputValue}
@@ -105,15 +103,14 @@ var cancelPipelineCmd = &cobra.Command{
 		userID, _ := cmd.Flags().GetString("user-id")
 		isParallel, _ := cmd.Flags().GetBool("parallel")
 
-		conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("Failed to connect to gRPC server: %v", err)
-		}
+		// 🔹 Get gRPC connection
+		conn, ctx, cancel := GetGRPCConnection()
 		defer conn.Close()
+		defer cancel()
 
 		client := proto.NewPipelineServiceClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		// defer cancel()
 
 		resp, err := client.CancelPipeline(ctx, &proto.CancelPipelineRequest{
 			PipelineId: pipelineID,
@@ -136,15 +133,14 @@ var getPipelineStatusCmd = &cobra.Command{
 		pipelineID, _ := cmd.Flags().GetString("pipeline-id")
 		isParallel, _ := cmd.Flags().GetBool("parallel")
 
-		conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("Failed to connect to gRPC server: %v", err)
-		}
+		// 🔹 Get gRPC connection
+		conn, ctx, cancel := GetGRPCConnection()
 		defer conn.Close()
+		defer cancel()
 
 		client := proto.NewPipelineServiceClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		// defer cancel()
 
 		resp, err := client.GetPipelineStatus(ctx, &proto.GetPipelineStatusRequest{
 			PipelineId: pipelineID,

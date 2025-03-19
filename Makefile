@@ -15,9 +15,6 @@ build-grpc:
 build-frontend:
 	docker build -t $(REGISTRY)/frontend:$(VERSION) -f deploy/docker/Dockerfile.frontend .
 
-build-democtl:
-	docker build -t $(REGISTRY)/democtl:$(VERSION) -f deploy/docker/Dockerfile.democtl .
-
 # 🔹 Push Images to Registry
 push-rest: build-rest
 	docker push $(REGISTRY)/rest-api:$(VERSION)
@@ -27,9 +24,6 @@ push-grpc: build-grpc
 
 push-frontend: build-frontend
 	docker push $(REGISTRY)/frontend:$(VERSION)
-
-push-democtl: build-democtl
-	docker push $(REGISTRY)/democtl:$(VERSION)
 
 # 🔹 Apply Kubernetes ConfigMaps and Secrets
 deploy-config:
@@ -46,11 +40,8 @@ deploy-grpc: push-grpc
 deploy-frontend: push-frontend
 	kubectl apply -f deploy/kubernetes/deployment/deployment-frontend.yaml -n $(NAMESPACE)
 
-deploy-democtl: push-democtl
-	kubectl apply -f deploy/kubernetes/jobs/democtl-job.yaml -n $(NAMESPACE)
-
 # 🔹 Deploy Everything (Full Deployment Pipeline)
-deploy-all: deploy-config deploy-rest deploy-grpc deploy-frontend deploy-democtl
+deploy-all: deploy-config deploy-rest deploy-grpc deploy-frontend
 
 # 🔹 Check Kubernetes Status
 status:
@@ -63,4 +54,3 @@ status:
 clean:
 	kubectl delete --ignore-not-found=true -f deploy/kubernetes/deployment/ -n $(NAMESPACE)
 	kubectl delete --ignore-not-found=true -f deploy/kubernetes/config/ -n $(NAMESPACE)
-	kubectl delete --ignore-not-found=true job democtl-job -n $(NAMESPACE)

@@ -45,7 +45,6 @@
 // 	}
 // }
 
-
 package main
 
 import (
@@ -58,6 +57,7 @@ import (
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/primary"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/adapters/secondary"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/core/services"
+	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/internal/utils"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -95,9 +95,11 @@ func main() {
 
 	dbRepo := secondary.NewDatabaseAdapter()
 
+	sseManager := utils.NewSSEManager()
+
 	// Initialize services
 	authService := services.NewAuthService(dbRepo)
-	pipelineService := services.NewPipelineService(dbRepo, nil) // gRPC does not need SSE
+	pipelineService := services.NewPipelineService(dbRepo, sseManager) // gRPC does not need SSE
 
 	var wg sync.WaitGroup
 	wg.Add(1) // Only 1 (gRPC)
