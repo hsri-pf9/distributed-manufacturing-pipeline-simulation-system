@@ -61,10 +61,6 @@ const RegisterPage = ({ apiType }) => {
       } catch {
         setMessage("Registration failed. Please try again.");
       }
-    // } else {
-    //   console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Register`);
-    //   setMessage("Open your email and click the link to authenticate.");
-    // }
   };
 
   return (
@@ -90,30 +86,9 @@ const LoginPage = ({ apiType }) => {
 
   const handleLogin = async () => {
     setMessage("");
-    // if (apiType === "rest") {
       try {
-        // const response = await axios.post(
-        //   "http://localhost:8080/login",
-        //   { email, password },
-        //   {
-        //     headers: { "Content-Type": "application/json" },
-        //     withCredentials: true, // ✅ Ensure cross-origin cookies are included
-        //   }
-        // );
         // const response = await axios.post("http://localhost:8080/login", { email, password });
         const response = await axios.post("http://localhost:30081/login", { email, password });
-  
-        // // ✅ Extract user_id, email, and token correctly
-        // const { user_id, token } = response.data;
-        // console.log("Full Response from Backend:", response.data);
-        // if (!user_id || !email || !token) throw new Error("Invalid response from backend");
-  
-        // console.log("User ID:", user_id);
-  
-        // // ✅ Store user_id and token for session persistence
-        // localStorage.setItem("user_id", user_id);
-        // localStorage.setItem("email", email);
-        // localStorage.setItem("token", token);
 
         const { token } = response.data;
         if (!token) throw new Error("Token not received");
@@ -130,10 +105,6 @@ const LoginPage = ({ apiType }) => {
         console.error("Login failed:", error);
         setMessage("Login failed. Please check your credentials.");
       }
-    // } else {
-    //   console.log(`Run this gRPC command manually: grpcurl -plaintext -d '{"email": "${email}", "password": "${password}"}' localhost:50051 auth.AuthService/Login`);
-    //   setMessage("Check console for gRPC login command.");
-    // }
   };
   
 
@@ -156,18 +127,8 @@ const App = () => {
       <AppBar position="static">
         <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
           <Typography variant="h6">Distributed Manufacturing System</Typography>
-          {/* <Select value={apiType} onChange={(e) => setApiType(e.target.value)} sx={{ color: "white", backgroundColor: "gray" }}>
-            <MenuItem value="rest">REST API</MenuItem>
-            <MenuItem value="grpc">gRPC</MenuItem>
-          </Select> */}
         </Toolbar>
       </AppBar>
-      {/* <Routes>
-        <Route path="/register" element={<RegisterPage apiType={apiType} />} />
-        <Route path="/login" element={<LoginPage apiType={apiType} />} />
-        <Route path="/dashboard/*" element={<Dashboard />} />
-        <Route path="/" element={<RegisterPage apiType={apiType} />} />
-      </Routes> */}
       <Routes>
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />

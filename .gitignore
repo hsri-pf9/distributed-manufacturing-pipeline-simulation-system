@@ -1,0 +1,29 @@
+# Ignore environment and secret configuration files
+.env
+deploy/kubernetes/config/config-db.yaml
+deploy/kubernetes/config/secret.db.yaml
+
+# Ignore dependency directories
+web/frontend/node_modules/
+
+# Ignore log and temp files
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Ignore compiled Go files
+*.exe
+*.out
+*.o
+
+# Ignore IDE and OS-specific files
+.vscode/
+.idea/
+*.iml
+
+# Ignore Go workspace-related files
+go.work
+go.work.sum
+bin/
+pkg/

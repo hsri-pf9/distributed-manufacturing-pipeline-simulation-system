@@ -11,9 +11,6 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# # Build the Go binary
-# RUN go build -o rest-api ./cmd/api-server/main.go
-
 # Build the Go binary as a static executable
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rest-api ./cmd/api-server/main.go
 

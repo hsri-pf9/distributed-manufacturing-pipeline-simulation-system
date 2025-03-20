@@ -30,22 +30,6 @@ func (s *BaseStage) GetID() uuid.UUID {
 	return s.ID
 }
 
-// func (s *BaseStage) Execute(ctx context.Context, input interface{}) (interface{}, error) {
-// 	log.Printf("Executing stage: %s with input: %v\n", s.ID, input)
-
-// 	// Simulate execution failure for testing error handling
-// 	if input == nil {
-// 		err := errors.New("input is nil, stage execution failed")
-// 		log.Printf("Stage %s execution failed: %v", s.ID, err)
-// 		return nil, err
-// 	}
-
-// 	time.Sleep(5 * time.Second)
-
-// 	log.Printf("Stage %s executed successfully", s.ID)
-// 	return input, nil
-// }
-
 func (s *BaseStage) Execute(ctx context.Context, input interface{}, sse *utils.SSEManager, pipelineID uuid.UUID) (interface{}, error) {
 	log.Printf("Executing stage: %s with input: %v\n", s.ID, input)
 

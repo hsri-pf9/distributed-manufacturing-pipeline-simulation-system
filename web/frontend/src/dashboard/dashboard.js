@@ -47,19 +47,6 @@ const Dashboard = () => {
   const [openStageModal, setOpenStageModal] = useState(false);
   const [sseEventSource, setSseEventSource] = useState(null);
 
-  // // Retrieve user_id from localStorage
-  // const user_id = localStorage.getItem("user_id");
-
-  // useEffect(() => {
-  //   if (!user_id) {
-  //     console.error("User ID not found! Redirecting to login.");
-  //     navigate("/login");
-  //     return;
-  //   }
-  //   fetchUserProfile();
-  //   fetchUserPipelines();
-  // }, [user_id]);
-
   // ✅ Get user ID from token
   const user_id = getUserIdFromToken();
   
@@ -74,12 +61,6 @@ const Dashboard = () => {
     fetchUserProfile();
     fetchUserPipelines();
   }, []);
-
-  // // ✅ Attach token to every API request
-  // const authAxios = axios.create({
-  //   baseURL: "http://localhost:8080",
-  //   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-  // });
 
   // ✅ Axios instance with dynamic token attachment
   const authAxios = axios.create({
@@ -117,19 +98,6 @@ const Dashboard = () => {
     localStorage.clear();
     navigate("/login");
   };
-
-  // const fetchUserProfile = async () => {
-  //   try {
-  //     const response = await axios.get(`http://localhost:8080/user/${user_id}`);
-  //     if (response.data) {
-  //       setUser(response.data);
-  //       localStorage.setItem("user_name", response.data.name);
-  //       localStorage.setItem("user_role", response.data.role);
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch user profile", error);
-  //   }
-  // };
 
   const fetchUserProfile = async () => {
     try {
@@ -262,22 +230,7 @@ const Dashboard = () => {
         console.warn("⚠️ Invalid SSE Event:", eventData);
         return;
       }
-
-      // if (eventData.type === "pipeline") {
-      //   setPipelines((prevPipelines) =>
-      //     prevPipelines.map((pipeline) =>
-      //       pipeline.PipelineID === eventData.pipeline_id ? { ...pipeline, Status: eventData.status } : pipeline
-      //     )
-      //   );
-      // }
-
-      // if (eventData.type === "stage" && selectedPipelineId === eventData.pipeline_id) {
-      //   setSelectedPipelineStages((prevStages) =>
-      //     prevStages.map((stage) =>
-      //       stage.StageID === eventData.stage_id ? { ...stage, Status: eventData.status } : stage
-      //     )
-      //   );
-      // }
+      
       if (eventData.type === "pipeline") {
         setPipelines((prevPipelines) =>
           prevPipelines.map((pipeline) =>

@@ -42,11 +42,6 @@ func (s *SSEManager) RegisterClient(c *gin.Context) {
 	// Create a done channel to detect client disconnect
 	done := make(chan struct{})
 
-	// // Run a goroutine to detect client disconnection
-	// go func() {
-	// 	<-c.Request.Context().Done()
-	// 	close(done) // Notify main function to remove the client
-	// }()
 	// ✅ Detect client disconnect
 	go func() {
 		select {
@@ -81,22 +76,6 @@ func (s *SSEManager) RegisterClient(c *gin.Context) {
 
 	log.Println("[SSE] Client disconnected")
 }
-
-// // Broadcast updates to all clients
-// func (s *SSEManager) BroadcastUpdate(message string) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-
-// 	log.Printf("[SSE] Broadcasting update: %s\n", message)
-
-// 	for clientChan := range s.clients {
-// 		select {
-// 		case clientChan <- message:
-// 		default:
-// 			log.Println("[SSE] Client channel full, dropping message")
-// 		}
-// 	}
-// }
 
 func (s *SSEManager) BroadcastUpdate(data interface{}) {
 	s.mu.Lock()
