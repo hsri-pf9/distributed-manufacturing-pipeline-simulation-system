@@ -1,7 +1,7 @@
 # Ignore environment and secret configuration files
 .env
 deploy/kubernetes/config/config-db.yaml
-deploy/kubernetes/config/secret.db.yaml
+deploy/kubernetes/config/secret-db.yaml
 
 # Ignore dependency directories
 web/frontend/node_modules/
