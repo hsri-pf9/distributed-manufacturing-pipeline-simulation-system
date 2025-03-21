@@ -184,7 +184,7 @@ const Dashboard = () => {
          // 🔹 Initialize all stages as "Pending" first
         const initializedStages = response.data.map(stage => ({
           StageID: stage.StageID,
-          Status: "Pending", // Assume "Pending" initially
+          Status: stage.Status || "Pending", // Assume "Pending" initially
         }));
 
         setSelectedPipelineStages(initializedStages);

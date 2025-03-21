@@ -52,13 +52,20 @@ const RegisterPage = ({ apiType }) => {
 
   const handleRegister = async () => {
     setMessage("");
-    // if (apiType === "rest") {
       try {
         // await axios.post("http://localhost:8080/register", { email, password });
         await axios.post("http://localhost:30081/register", { email, password });
         setMessage("Registration successful! Please check your email to verify.");
-        window.open("https://mail.google.com", "_blank");
-      } catch {
+        const gmailWindow = window.open("https://mail.google.com", "_blank");
+        if (!gmailWindow) {
+          alert("Please allow pop-ups to open Gmail.");
+        }
+        setTimeout(() => {
+          console.log("Redirecting to login page..."); // ✅ Debugging step
+          navigate("/login");
+        }, 1000);
+      } catch (error) {
+        console.error("Registration error:", error);
         setMessage("Registration failed. Please try again.");
       }
   };
