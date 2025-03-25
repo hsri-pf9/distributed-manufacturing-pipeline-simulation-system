@@ -247,8 +247,9 @@ The backend REST API provides endpoints for user authentication, pipeline manage
 
 ## Deployment Architecture
 
+
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/91a6de44-5609-42a5-8c44-1669c5e880ca" alt="Database & Supabase Architecture">
+  <img src="https://github.com/user-attachments/assets/9a4b7b8a-3e3a-41eb-abe9-06ed5494a55c" alt="Deployment Architecture">
 </p>
 
 The system consists of three main components, each running in a separate pod inside the Kubernetes cluster:
