@@ -275,16 +275,16 @@ The system consists of three main components, each running in a separate pod ins
 
 ### 1. User Accesses the Frontend (NodePort 30080)
 - The React app is served by Nginx.
-- When the user performs actions requiring API calls, Nginx proxies requests to the REST API (NodePort 30081).
+- When a user performs an action (like logging in or starting a pipeline), Nginx forwards API requests to the REST API via /api/*.
 
-### 2. REST API Handles User Requests (NodePort 30081)
-- The REST API processes authentication, user data, and pipeline operations.
-- If an operation requires high-performance execution, the REST API calls the gRPC Server internally.
+### 2. REST API Processes Requests (NodePort 30081)
+- The REST API handles authentication, user management, and pipeline execution.
+- It interacts directly with Supabase for database operations.
 
-### 3. gRPC Server Processes High-Performance Operations (ClusterIP)
-- The gRPC Server does not expose a public NodePort.
-- It is only accessible from within the Kubernetes cluster.
-- The REST API communicates with it for specific tasks.
+### 3. CLI Calls gRPC Server for High-Performance Tasks
+- The democtl CLI tool interacts with the gRPC Server via port 50051.
+- The gRPC Server does not expose a NodePort, meaning it is not accessible externally.
+- This design ensures better security and performance since gRPC is optimized for fast internal communication.
 
 ## Configuration & Secrets Management
 - Kubernetes ConfigMaps and Secrets store database connection details and API keys.
