@@ -3,6 +3,7 @@
 deploy/kubernetes/config/config-db.yaml
 deploy/kubernetes/config/secret-db.yaml
 deploy/kubernetes/config/nginx-tls.yaml
+certs/
 
 # Ignore dependency directories
 web/frontend/node_modules/
