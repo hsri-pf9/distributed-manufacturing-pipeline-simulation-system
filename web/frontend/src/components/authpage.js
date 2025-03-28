@@ -54,7 +54,8 @@ const RegisterPage = ({ apiType }) => {
     setMessage("");
       try {
         // await axios.post("http://localhost:8080/register", { email, password });
-        await axios.post("http://localhost:30081/register", { email, password });
+        // await axios.post("http://localhost:30081/register", { email, password });
+        await axios.post("https://myapp.local:30081/register", { email, password });
         setMessage("Registration successful! Please check your email to verify.");
         const gmailWindow = window.open("https://mail.google.com", "_blank");
         if (!gmailWindow) {
@@ -95,7 +96,8 @@ const LoginPage = ({ apiType }) => {
     setMessage("");
       try {
         // const response = await axios.post("http://localhost:8080/login", { email, password });
-        const response = await axios.post("http://localhost:30081/login", { email, password });
+        // const response = await axios.post("http://localhost:30081/login", { email, password });
+        const response = await axios.post("https://myapp.local:30081/login", { email, password });
 
         const { token } = response.data;
         if (!token) throw new Error("Token not received");

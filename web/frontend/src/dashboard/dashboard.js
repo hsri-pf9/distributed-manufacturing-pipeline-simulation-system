@@ -65,7 +65,8 @@ const Dashboard = () => {
   // ✅ Axios instance with dynamic token attachment
   const authAxios = axios.create({
     // baseURL: "http://localhost:8080",
-    baseURL: "http://localhost:30081",
+    // baseURL: "http://localhost:30081",
+    baseURL: "https://myapp.local:30081",
   });
 
   authAxios.interceptors.request.use(
@@ -220,7 +221,7 @@ const Dashboard = () => {
 
     const token = localStorage.getItem("token");
     // const eventSource = new EventSource(`http://localhost:8080/pipelines/${pipelineId}/stream?token=${token}`);
-    const eventSource = new EventSource(`http://localhost:30081/pipelines/${pipelineId}/stream?token=${token}`);
+    const eventSource = new EventSource(`https://myapp.local:30081/pipelines/${pipelineId}/stream?token=${token}`);
 
     eventSource.onmessage = (event) => {
       const eventData = JSON.parse(event.data);

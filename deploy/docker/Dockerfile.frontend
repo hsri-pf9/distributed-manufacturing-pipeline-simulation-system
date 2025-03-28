@@ -17,14 +17,27 @@ RUN npm run build
 # Step 2: Serve with Nginx
 FROM nginx:latest
 
+# Set working directory
+WORKDIR /app
+
 # Copy custom Nginx config
 COPY deploy/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy React build output to Nginx web root
 COPY --from=build /app/build /usr/share/nginx/html
 
+# Create directory for SSL certificates
+RUN mkdir -p /app/certs
+
+# # Copy SSL certificates into container
+# COPY certs/myapp.local.pem /app/certs/myapp.local.pem
+# COPY certs/myapp.local-key.pem /app/certs/myapp.local-key.pem
+
+# # Verify if certificates are copied (Debugging Step)
+# RUN ls -lah /app/certs/
+
 # Expose port 80 for Nginx
-EXPOSE 80
+EXPOSE 80 443
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

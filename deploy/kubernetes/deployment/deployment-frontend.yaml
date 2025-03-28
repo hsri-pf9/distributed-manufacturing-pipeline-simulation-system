@@ -1,3 +1,45 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: frontend
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: frontend
+#   template:
+#     metadata:
+#       labels:
+#         app: frontend
+#     spec:
+#       containers:
+#         - name: frontend
+#           image: hsri/frontend:v1.0.0 #TODO
+#           ports:
+#             - containerPort: 80
+#           resources:
+#             requests:
+#               memory: "256Mi"
+#               cpu: "250m"
+#             limits:
+#               memory: "512Mi"
+#               cpu: "500m"
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: frontend-service
+# spec:
+#   selector:
+#     app: frontend
+#   ports:
+#     - protocol: TCP
+#       port: 80
+#       targetPort: 80
+#       nodePort: 30080
+#   type: NodePort
+
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,13 +59,22 @@ spec:
           image: hsri/frontend:v1.0.0 #TODO
           ports:
             - containerPort: 80
-          resources:
+            - containerPort: 443
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/nginx/certs
+              readOnly: true
+          resources:  # ✅ Corrected placement of resources
             requests:
               memory: "256Mi"
               cpu: "250m"
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: ssl-certs
+          secret:
+            secretName: nginx-tls
 ---
 apiVersion: v1
 kind: Service
@@ -34,7 +85,7 @@ spec:
     app: frontend
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 443
+      targetPort: 443
       nodePort: 30080
   type: NodePort

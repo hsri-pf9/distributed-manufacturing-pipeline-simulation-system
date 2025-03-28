@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	// "path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hsri-pf9/distributed-manufacturing-pipeline-simulation-system/api/rest"
@@ -29,7 +30,8 @@ func startRESTServer(authService *services.AuthService, pipelineService *service
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		// AllowOrigins:     []string{"http://localhost:3000"},
-		AllowOrigins:     []string{"http://localhost:30080", "http://localhost:3000"},
+		// AllowOrigins:     []string{"http://localhost:30080", "http://localhost:3000"},
+		AllowOrigins:     []string{"https://myapp.local:30080", "https://myapp.local:3000", "https://myapp.local:30081"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -54,11 +56,23 @@ func startRESTServer(authService *services.AuthService, pipelineService *service
 	// SSE Route
 	r.GET("/pipelines/:id/stream", authMiddleware, sseManager.RegisterClient)
 
+	// Resolve absolute certificate paths
+	certPath := "/app/certs/tls.crt"
+	keyPath := "/app/certs/tls.key"
+
+	// Log paths for debugging
+	log.Printf("🔹 Using SSL Certificate: %s", certPath)
+	log.Printf("🔹 Using SSL Key: %s", keyPath)
+
 	// Start REST API server
 	log.Println("🚀 Starting REST API & Frontend on port 8080...")
-	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatalf("❌ Failed to start REST server: %v", err)
+	// if err := http.ListenAndServe(":8080", r); err != nil {
+	// 	log.Fatalf("❌ Failed to start REST server: %v", err)
+	// }
+	if err := http.ListenAndServeTLS(":8080", certPath, keyPath, r); err != nil {
+		log.Fatalf("❌ Failed to start HTTPS server: %v", err)
 	}
+
 }
 
 func main() {

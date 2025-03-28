@@ -33,6 +33,10 @@ spec:
                 secretKeyRef:
                   name: supabase-secrets
                   key: SUPABASE_API_KEY
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /app/certs
+              readOnly: true
           resources:  # ✅ Added resource requests and limits
             requests:
               memory: "128Mi"
@@ -40,6 +44,10 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: ssl-certs
+          secret:
+            secretName: nginx-tls
 ---
 apiVersion: v1
 kind: Service
