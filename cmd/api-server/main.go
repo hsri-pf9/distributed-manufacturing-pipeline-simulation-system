@@ -31,7 +31,7 @@ func startRESTServer(authService *services.AuthService, pipelineService *service
 	r.Use(cors.New(cors.Config{
 		// AllowOrigins:     []string{"http://localhost:3000"},
 		// AllowOrigins:     []string{"http://localhost:30080", "http://localhost:3000"},
-		AllowOrigins:     []string{"https://myapp.local:30080", "https://myapp.local:3000", "https://myapp.local:30081"},
+		AllowOrigins:     []string{"https://myapp.local:30080", "https://myapp.local:3000", "https://myapp.local:30081","https://172.29.20.150:30080","https://172.29.20.150:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,

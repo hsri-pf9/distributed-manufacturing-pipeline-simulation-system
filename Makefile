@@ -58,7 +58,7 @@
 
 # Set Docker registry and version
 REGISTRY=hsri
-VERSION=v1.0.0
+VERSION=v2.0.0
 NAMESPACE=default
 
 # 🔹 Build, Push, and Deploy in One Step
